@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Free Limiteds Board</title>
+<meta name="description" content="Live board of free Roblox UGC limiteds that still have copies left, sorted by availability.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+  :root{
+    --bg:#f2f3f7; --panel:#fff; --panel-2:#e9ebf2;
+    --ink:#161a26; --ink-2:#4b5268; --ink-3:#7b8299;
+    --line:#d7dae6; --accent:#2b4ee6; --accent-soft:#e2e7ff;
+    --hot:#c2410c; --bar:#2b4ee6; --bar-track:#dfe2ee;
+    color-scheme:light;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0e1017; --panel:#161a24; --panel-2:#1e2330;
+      --ink:#eef0f6; --ink-2:#a9b0c4; --ink-3:#767f96;
+      --line:#2a3040; --accent:#7d92ff; --accent-soft:#1f2740;
+      --hot:#fb923c; --bar:#7d92ff; --bar-track:#242b3a;
+      color-scheme:dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0e1017; --panel:#161a24; --panel-2:#1e2330;
+    --ink:#eef0f6; --ink-2:#a9b0c4; --ink-3:#767f96;
+    --line:#2a3040; --accent:#7d92ff; --accent-soft:#1f2740;
+    --hot:#fb923c; --bar:#7d92ff; --bar-track:#242b3a;
+    color-scheme:dark;
+  }
+
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    font-size:15px; line-height:1.5;
+    padding-inline:16px;
+    padding-block:calc(28px + env(safe-area-inset-top,0px)) calc(56px + env(safe-area-inset-bottom,0px));
+  }
+  img{max-width:100%}
+  [hidden]{display:none!important}
+  .wrap{max-width:1080px;margin:0 auto}
+
+  .eyebrow{
+    font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:11px; letter-spacing:.14em;
+    text-transform:uppercase; color:var(--ink-3); margin:0 0 8px;
+  }
+  h1{
+    font-family:"Bricolage Grotesque","IBM Plex Sans",sans-serif; font-weight:800;
+    font-size:clamp(30px,6vw,46px); line-height:1.02; letter-spacing:-.02em; margin:0; text-wrap:balance;
+  }
+  .lede{color:var(--ink-2); max-width:62ch; margin:12px 0 0}
+  .lede b{color:var(--ink); font-weight:600}
+
+  .stats{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px;min-width:118px}
+  .stat .n{font-family:"IBM Plex Mono",monospace;font-weight:600;font-size:20px;font-variant-numeric:tabular-nums}
+  .stat .l{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+
+  .controls{
+    position:sticky; top:env(safe-area-inset-top,0px); z-index:5;
+    background:var(--bg); padding-block:14px; margin-top:22px;
+    border-bottom:1px solid var(--line);
+    display:flex; flex-wrap:wrap; gap:10px; align-items:center;
+  }
+  .seg{display:flex;background:var(--panel-2);border-radius:9px;padding:3px;gap:2px}
+  .seg button{font:inherit;font-size:13px;font-weight:500;border:0;background:transparent;color:var(--ink-2);padding:6px 12px;border-radius:7px;cursor:pointer}
+  .seg button[aria-pressed="true"]{background:var(--panel);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  input[type=search],select{font:inherit;font-size:13px;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:9px;padding:8px 11px}
+  input[type=search]{flex:1 1 180px;min-width:0}
+  .count{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--ink-3);margin-left:auto;white-space:nowrap}
+  .refresh{font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;background:var(--panel);color:var(--ink-2);border:1px solid var(--line);border-radius:9px;padding:8px 12px}
+  .refresh:hover{color:var(--accent);border-color:var(--accent)}
+  .refresh[disabled]{opacity:.5;cursor:default}
+
+  .list{display:flex;flex-direction:column;margin-top:2px}
+  .row{display:grid;grid-template-columns:44px 1fr 132px 96px;gap:14px;align-items:center;padding:13px 4px;border-bottom:1px solid var(--line)}
+  .row:hover{background:var(--panel)}
+  .thumb{width:44px;height:44px;border-radius:8px;background:var(--panel-2);object-fit:contain;display:block}
+  .name{font-weight:600;letter-spacing:-.005em;overflow-wrap:anywhere}
+  .name a{color:var(--ink);text-decoration:none;background:linear-gradient(var(--accent),var(--accent)) 0 100%/100% 1px no-repeat}
+  .name a:hover{color:var(--accent)}
+  .meta{font-size:12.5px;color:var(--ink-3);margin-top:3px;display:flex;flex-wrap:wrap;gap:8px;align-items:baseline}
+  .meta a{color:var(--ink-2);text-decoration:none;border-bottom:1px dotted var(--line)}
+  .meta a:hover{color:var(--accent);border-bottom-color:var(--accent)}
+  .date{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums}
+  .fresh{color:var(--hot);font-weight:600}
+
+  .stockcell{text-align:right}
+  .stocknum{font-family:"IBM Plex Mono",monospace;font-weight:600;font-variant-numeric:tabular-nums;font-size:14px}
+  .stocknum span{color:var(--ink-3);font-weight:400}
+  .track{height:4px;border-radius:2px;background:var(--bar-track);margin-top:5px;overflow:hidden}
+  .fill{height:100%;background:var(--bar);border-radius:2px}
+  .get{display:block;text-align:center;font-size:12.5px;font-weight:600;text-decoration:none;color:var(--accent);background:var(--accent-soft);border-radius:8px;padding:7px 8px}
+  .get:hover{background:var(--accent);color:#fff}
+
+  .more{display:block;margin:22px auto 0;font:inherit;font-weight:600;font-size:13px;cursor:pointer;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:10px 20px}
+  .empty{padding:40px 0;color:var(--ink-3);text-align:center}
+  .empty b{color:var(--ink);display:block;margin-bottom:6px}
+  footer{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);font-size:12.5px;color:var(--ink-3)}
+  footer a{color:var(--ink-2)}
+  footer code{font-family:"IBM Plex Mono",monospace;font-size:11.5px;background:var(--panel-2);padding:1px 5px;border-radius:4px}
+
+  @media (max-width:640px){
+    .row{grid-template-columns:40px 1fr 92px;grid-template-areas:"thumb name stock" ". get get";row-gap:10px}
+    .thumbcell{grid-area:thumb}.info{grid-area:name}.stockcell{grid-area:stock}.getcell{grid-area:get}
+    .thumb{width:40px;height:40px}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="eyebrow" id="stamp">Rolimon's free UGC feed &middot; loading&hellip;</p>
+    <h1>Free Limiteds Board</h1>
+    <p class="lede">Every free Roblox UGC limited that still has <b>copies left</b>, pulled live from Rolimon's each time you open this page and sorted by how many are up for grabs. Code-gated shops are filtered out, so what is listed is what you can actually claim by playing.</p>
+    <div class="stats">
+      <div class="stat"><div class="n" id="s-month">&mdash;</div><div class="l">last 30 days</div></div>
+      <div class="stat"><div class="n" id="s-year">&mdash;</div><div class="l">this year</div></div>
+      <div class="stat"><div class="n" id="s-copies">&mdash;</div><div class="l">copies left</div></div>
+      <div class="stat"><div class="n" id="s-games">&mdash;</div><div class="l">source games</div></div>
+    </div>
+  </header>
+
+  <div class="controls">
+    <div class="seg" role="group" aria-label="Date range">
+      <button id="f-month" type="button" aria-pressed="true">Last 30 days</button>
+      <button id="f-year" type="button" aria-pressed="false">This year</button>
+    </div>
+    <div class="seg" role="group" aria-label="Minimum stock">
+      <button class="minbtn" type="button" data-min="1" aria-pressed="true">Any stock</button>
+      <button class="minbtn" type="button" data-min="100" aria-pressed="false">100+</button>
+      <button class="minbtn" type="button" data-min="1000" aria-pressed="false">1,000+</button>
+    </div>
+    <input type="search" id="q" placeholder="Search item or game" aria-label="Search items and games">
+    <select id="sort" aria-label="Sort order">
+      <option value="stock">Most copies left</option>
+      <option value="new">Newest added</option>
+      <option value="pct">Least claimed (%)</option>
+    </select>
+    <button class="refresh" id="refresh" type="button">Refresh</button>
+    <span class="count" id="count">loading&hellip;</span>
+  </div>
+
+  <div class="list" id="list"></div>
+  <button class="more" id="more" type="button" hidden>Show 100 more</button>
+
+  <footer>
+    Live from <a href="https://www.rolimons.com/free-roblox-limiteds" target="_blank" rel="noopener">rolimons.com/free-roblox-limiteds</a>, cached 15 minutes at the edge. Dates are when Rolimon's first indexed the item, not always the Roblox release date. Flex UGC Codes and My Avatar! are excluded &mdash; edit <code>EXCLUDED_GAMES</code> in <code>api/items.js</code> to change that.
+  </footer>
+</div>
+
+<script>
+(function () {
+  var PAGE = 100, shown = PAGE, rows = [], view = [], fetchedAt = null;
+  var state = { range: 'month', min: 1, q: '', sort: 'stock' };
+
+  var listEl = document.getElementById('list');
+  var countEl = document.getElementById('count');
+  var moreEl = document.getElementById('more');
+  var stampEl = document.getElementById('stamp');
+  var refreshEl = document.getElementById('refresh');
+
+  function nf(n) { return n.toLocaleString('en-US'); }
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+  function today() { return new Date().toISOString().slice(0, 10); }
+  function monthCut() { return new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10); }
+  function daysAgo(d) {
+    return Math.round((Date.parse(today() + 'T00:00:00Z') - Date.parse(d + 'T00:00:00Z')) / 86400000);
+  }
+
+  function apply() {
+    var q = state.q.toLowerCase(), cut = monthCut();
+    view = rows.filter(function (r) {
+      if (state.range === 'month' && r.d < cut) return false;
+      if (r.r < state.min) return false;
+      if (q && (r.n + ' ' + r.g).toLowerCase().indexOf(q) === -1) return false;
+      return true;
+    });
+    if (state.sort === 'new') view.sort(function (a, b) { return a.d < b.d ? 1 : a.d > b.d ? -1 : b.r - a.r; });
+    else if (state.sort === 'pct') view.sort(function (a, b) { return (b.r / b.t) - (a.r / a.t) || b.r - a.r; });
+    else view.sort(function (a, b) { return b.r - a.r; });
+    shown = PAGE;
+    render();
+  }
+
+  function render() {
+    countEl.textContent = nf(view.length) + ' item' + (view.length === 1 ? '' : 's');
+    if (!view.length) {
+      listEl.innerHTML = '<p class="empty">Nothing matches that filter.</p>';
+      moreEl.hidden = true;
+      return;
+    }
+    var out = [];
+    for (var i = 0; i < Math.min(shown, view.length); i++) {
+      var r = view[i];
+      var pct = Math.max(2, Math.round(r.r / r.t * 100));
+      var ago = daysAgo(r.d);
+      var when = ago <= 7
+        ? '<span class="fresh">' + (ago <= 0 ? 'today' : ago + 'd ago') + '</span>'
+        : '<span class="date">' + r.d + '</span>';
+      out.push(
+        '<div class="row">' +
+          '<div class="thumbcell">' +
+            (r.th ? '<img class="thumb" src="' + esc(r.th) + '" alt="" loading="lazy">' : '<div class="thumb"></div>') +
+          '</div>' +
+          '<div class="info">' +
+            '<div class="name"><a href="https://www.roblox.com/catalog/' + r.i + '/" target="_blank" rel="noopener">' + esc(r.n) + '</a></div>' +
+            '<div class="meta">' + when +
+              (r.gi
+                ? ' <a href="https://www.roblox.com/games/' + r.gi + '" target="_blank" rel="noopener">' + esc(r.g) + '</a>'
+                : ' <span>no game listed</span>') +
+            '</div>' +
+          '</div>' +
+          '<div class="stockcell">' +
+            '<div class="stocknum">' + nf(r.r) + ' <span>/ ' + nf(r.t) + '</span></div>' +
+            '<div class="track"><div class="fill" style="width:' + pct + '%"></div></div>' +
+          '</div>' +
+          '<div class="getcell">' +
+            (r.gi ? '<a class="get" href="https://www.roblox.com/games/' + r.gi + '" target="_blank" rel="noopener">Get it</a>' : '') +
+          '</div>' +
+        '</div>');
+    }
+    listEl.innerHTML = out.join('');
+    var left = view.length - shown;
+    moreEl.hidden = left <= 0;
+    moreEl.textContent = 'Show ' + nf(Math.min(PAGE, left)) + ' more';
+  }
+
+  function setRange(v) {
+    state.range = v;
+    document.getElementById('f-month').setAttribute('aria-pressed', v === 'month');
+    document.getElementById('f-year').setAttribute('aria-pressed', v === 'year');
+    apply();
+  }
+  document.getElementById('f-month').addEventListener('click', function () { setRange('month'); });
+  document.getElementById('f-year').addEventListener('click', function () { setRange('year'); });
+
+  Array.prototype.forEach.call(document.querySelectorAll('.minbtn'), function (b) {
+    b.addEventListener('click', function () {
+      state.min = +b.getAttribute('data-min');
+      Array.prototype.forEach.call(document.querySelectorAll('.minbtn'), function (o) {
+        o.setAttribute('aria-pressed', o === b);
+      });
+      apply();
+    });
+  });
+  document.getElementById('q').addEventListener('input', function (e) { state.q = e.target.value; apply(); });
+  document.getElementById('sort').addEventListener('change', function (e) { state.sort = e.target.value; apply(); });
+  moreEl.addEventListener('click', function () { shown += PAGE; render(); });
+  refreshEl.addEventListener('click', function () { load(true); });
+
+  function stamp() {
+    if (!fetchedAt) return;
+    var mins = Math.round((Date.now() - fetchedAt) / 60000);
+    var age = mins < 1 ? 'just now'
+      : mins === 1 ? '1 min ago'
+      : mins < 90 ? mins + ' min ago'
+      : Math.round(mins / 60) + ' hr ago';
+    stampEl.textContent = "Rolimon's free UGC feed · updated " + age;
+  }
+
+  function load(bust) {
+    refreshEl.disabled = true;
+    refreshEl.textContent = 'Refreshing';
+    fetch('/api/items' + (bust ? '?t=' + Date.now() : ''))
+      .then(function (r) {
+        if (!r.ok) return r.json().then(function (j) { throw new Error(j.error || 'HTTP ' + r.status); });
+        return r.json();
+      })
+      .then(function (d) {
+        rows = d.items;
+        fetchedAt = Date.parse(d.fetchedAt);
+        var month = 0, copies = 0, games = {}, cut = monthCut();
+        rows.forEach(function (r) {
+          if (r.d >= cut) month++;
+          copies += r.r;
+          if (r.gi) games[r.gi] = 1;
+        });
+        document.getElementById('s-month').textContent = nf(month);
+        document.getElementById('s-year').textContent = nf(rows.length);
+        document.getElementById('s-copies').textContent = nf(copies);
+        document.getElementById('s-games').textContent = nf(Object.keys(games).length);
+        stamp();
+        apply();
+      })
+      .catch(function (err) {
+        listEl.innerHTML = '<p class="empty"><b>Could not reach the feed.</b>' + esc(err.message) + '</p>';
+        countEl.textContent = 'error';
+        stampEl.textContent = "Rolimon's free UGC feed · offline";
+      })
+      .then(function () {
+        refreshEl.disabled = false;
+        refreshEl.textContent = 'Refresh';
+      });
+  }
+
+  setInterval(stamp, 60000);
+  load(false);
+})();
+</script>
+</body>
+</html>

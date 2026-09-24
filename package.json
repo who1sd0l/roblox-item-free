@@ -1,0 +1,14 @@
+{
+  "name": "free-limiteds",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Live board of free Roblox UGC limiteds that still have copies left.",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
+  }
+}
