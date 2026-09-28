@@ -41,9 +41,13 @@ Run `vercel dev` for a local server at http://localhost:3000 with the API workin
 
 ## Discord alerts
 
-`/api/watch` posts to a Discord channel when a free limited with **500+ total copies**:
+`/api/watch` watches every in-stock free limited released this year with **500+ total copies** and
+posts to a Discord channel when one:
 
 - **starts being claimed**: it sat untouched (copies left = total) and the count just moved
+- **is still claimable**: an older item's stock moved after 12 hours of no movement (or for the
+  first time since the watcher started). It won't ping again while it keeps moving, only after it
+  goes quiet for 12 hours and moves again. More than 4 at once arrive as one list.
 - **drops**: it's new since the last check (the alert says whether it's claimable yet)
 
 It remembers the previous numbers in Upstash Redis and needs something to call it every minute.
@@ -57,6 +61,7 @@ It remembers the previous numbers in Upstash Redis and needs something to call i
    - `WATCH_SECRET`: any long random string (stops strangers triggering it)
    - `DISCORD_MENTION` *(optional)*: e.g. `@everyone`, added to claim-started alerts so they ping
    - `MIN_TOTAL` *(optional)*: minimum total copies, default `500`
+   - `IDLE_HOURS` *(optional)*: how long an item must be quiet before a "still claimable" alert, default `12`
 
    Then redeploy so the function picks them up.
 4. **Test**: open `https://YOUR-SITE.vercel.app/api/watch?key=WATCH_SECRET&test=1`; a sample alert
