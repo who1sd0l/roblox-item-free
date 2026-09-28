@@ -16,7 +16,7 @@ only ever talks to `/api/items` on your own domain.
 ```
 api/_lib/          shared Rolimon's scraper (not an endpoint)
 api/items.js       JSON feed for the board
-api/watch.js       phone alerts (ntfy) for 500+ copy items
+api/watch.js       Discord alerts for 500+ copy items
 public/index.html  the board (static, fetches /api/items on open)
 vercel.json        function memory / timeout
 ```
@@ -39,37 +39,33 @@ vercel --prod   # production URL
 
 Run `vercel dev` for a local server at http://localhost:3000 with the API working.
 
-## Phone alerts (ntfy)
+## Discord alerts
 
-`/api/watch` sends a push notification to your phone through [ntfy](https://ntfy.sh) when a free
-limited with **500+ total copies**:
+`/api/watch` posts to a Discord channel when a free limited with **500+ total copies**:
 
-- **starts being claimed** — it sat untouched (copies left = total) and the count just moved.
-  Sent as *urgent*, so it rings even on silent. Tapping it opens the game.
-- **drops** — it's new since the last check (the alert says whether it's claimable yet). A burst of
-  more than 3 new drops arrives as one summary.
+- **starts being claimed**: it sat untouched (copies left = total) and the count just moved
+- **drops**: it's new since the last check (the alert says whether it's claimable yet)
 
 It remembers the previous numbers in Upstash Redis and needs something to call it every minute.
 
-1. **ntfy** — install the ntfy app (iOS / Android), tap **+**, and subscribe to a topic name only you
-   know, e.g. `ugc-alerts-x7k29q`. Topics on ntfy.sh are public to anyone who guesses the name.
-   On Android, open the topic's settings and allow urgent alerts to override Do Not Disturb.
-2. **Redis** — Vercel project → Storage → Create → Upstash (Redis), free plan, connect it to this
+1. **Webhook**: in Discord, channel → Edit Channel → Integrations → Webhooks → New Webhook → Copy
+   Webhook URL. Keep it private: anyone with the URL can post in the channel.
+2. **Redis**: Vercel project → Storage → Create → Upstash (Redis), free plan, connect it to this
    project. That adds `KV_REST_API_URL` and `KV_REST_API_TOKEN` automatically.
-3. **Env vars** — Vercel project → Settings → Environment Variables:
-   - `NTFY_TOPIC` — the topic name from step 1
-   - `WATCH_SECRET` — any long random string (stops strangers triggering it)
-   - `MIN_TOTAL` *(optional)* — minimum total copies, default `500`
-   - `NTFY_SERVER` / `NTFY_TOKEN` *(optional)* — only for a self-hosted or password-protected topic
+3. **Env vars**: Vercel project → Settings → Environment Variables:
+   - `DISCORD_WEBHOOK_URL`: the webhook URL
+   - `WATCH_SECRET`: any long random string (stops strangers triggering it)
+   - `DISCORD_MENTION` *(optional)*: e.g. `@everyone`, added to claim-started alerts so they ping
+   - `MIN_TOTAL` *(optional)*: minimum total copies, default `500`
 
    Then redeploy so the function picks them up.
-4. **Test** — open `https://YOUR-SITE.vercel.app/api/watch?key=WATCH_SECRET&test=1`; a sample alert
-   should pop up on your phone.
-5. **Schedule** — at [cron-job.org](https://cron-job.org) (free) create a job for
+4. **Test**: open `https://YOUR-SITE.vercel.app/api/watch?key=WATCH_SECRET&test=1`; a sample alert
+   should appear in Discord.
+5. **Schedule**: at [cron-job.org](https://cron-job.org) (free) create a job for
    `https://YOUR-SITE.vercel.app/api/watch?key=WATCH_SECRET` every 1 minute. Vercel's own cron
    only runs once a day on the free plan, which is too slow for this.
 
-The first run sends "Watcher online" and just records the baseline; alerts start from the second
+The first run posts "Watcher online" and just records the baseline; alerts start from the second
 run. `?dry=1` shows what would be sent without sending or saving. Alerts can only be as fast as
 Rolimon's updates its own numbers.
 

@@ -1,22 +1,22 @@
-// Phone alerts (via ntfy) for big free limiteds. Hit this every minute from an external cron
+// Discord alerts for big free limiteds. Hit this every minute from an external cron
 // (cron-job.org): GET /api/watch?key=WATCH_SECRET
 //
-// Each run compares Rolimon's numbers with the previous run (kept in Upstash Redis) and sends:
-//   - "Claiming started"  an item that sat untouched (copies left = total) has started moving (urgent)
+// Each run compares Rolimon's numbers with the previous run (kept in Upstash Redis) and posts:
+//   - "Claiming started"  an item that sat untouched (copies left = total) has started moving
 //   - "New drop"          an item that wasn't there last run
 // Only items with at least MIN_TOTAL total copies are tracked.
 //
-// Env: NTFY_TOPIC, WATCH_SECRET, KV_REST_API_URL + KV_REST_API_TOKEN
+// Env: DISCORD_WEBHOOK_URL, WATCH_SECRET, KV_REST_API_URL + KV_REST_API_TOKEN
 //      (or UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN), optional MIN_TOTAL (default 500),
-//      optional NTFY_SERVER (default https://ntfy.sh) and NTFY_TOKEN for a protected topic.
+//      optional DISCORD_MENTION (e.g. "@everyone" or "<@&roleId>") prepended to claim-started pings.
 // Query: ?test=1 sends a sample alert; ?dry=1 reports what would be sent without sending or saving.
 
 import { fetchItems } from './_lib/rolimons.js';
 
 const STATE_KEY = 'flb:watch:v1';
 const TRACK_DAYS = 60;
-// More new drops than this in one run get bundled into a single summary notification.
-const MAX_SINGLE_NEW = 3;
+const COLOR_STARTED = 0x22c55e;
+const COLOR_NEW = 0x7c5cff;
 
 const env = (k) => (process.env[k] || '').trim();
 
@@ -34,74 +34,71 @@ async function redis(cmd) {
   return j.result;
 }
 
-async function ntfy(msg) {
-  const topic = env('NTFY_TOPIC');
-  if (!topic) throw new Error('NTFY_TOPIC is not set');
-  const headers = { 'content-type': 'application/json' };
-  if (env('NTFY_TOKEN')) headers.authorization = `Bearer ${env('NTFY_TOKEN')}`;
-  const r = await fetch((env('NTFY_SERVER') || 'https://ntfy.sh').replace(/\/+$/, '') + '/', {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({ topic, ...msg }),
-  });
-  if (!r.ok) throw new Error(`ntfy returned ${r.status}: ${(await r.text()).slice(0, 200)}`);
+async function discord(payload) {
+  const url = env('DISCORD_WEBHOOK_URL');
+  if (!url) throw new Error('DISCORD_WEBHOOK_URL is not set');
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const r = await fetch(url + (url.includes('?') ? '&' : '?') + 'wait=true', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (r.ok) return;
+    if (r.status === 429) {
+      const j = await r.json().catch(() => ({}));
+      await new Promise((ok) => setTimeout(ok, Math.min(5, j.retry_after || 1) * 1000));
+      continue;
+    }
+    throw new Error(`Discord returned ${r.status}: ${(await r.text()).slice(0, 200)}`);
+  }
+  throw new Error('Discord kept rate-limiting the webhook');
 }
 
 const nf = (n) => n.toLocaleString('en-US');
-const png = (thumb) => (thumb || '').replace('/Webp/', '/Png/');
+// Game names like "[NEW] Foo" would break Discord's [text](url) link syntax.
+const md = (s) => s.replace(/[\[\]\\*_~`|]/g, '\\$&');
 
-function ago(unix) {
-  const s = Date.now() / 1000 - unix;
-  return s < 3600 ? `${Math.max(1, Math.round(s / 60))}m ago`
-    : s < 86400 ? `${Math.round(s / 3600)}h ago`
-    : `${Math.round(s / 86400)}d ago`;
-}
-
-function alert(item, kind) {
+function embed(item, kind) {
+  const claimed = item.t - item.r;
   const catalog = `https://www.roblox.com/catalog/${item.i}/`;
   const game = item.gi ? `https://www.roblox.com/games/${item.gi}` : '';
-  const claimed = item.t - item.r;
   const status = kind === 'started'
-    ? `Claiming is open — ${nf(claimed)} claimed so far`
+    ? `🟢 **Claiming is open** — ${nf(claimed)} claimed so far`
     : item.r === item.t
-      ? 'Not claimable yet — you\'ll get an urgent alert when it starts'
-      : `Already claiming — ${nf(claimed)} claimed`;
+      ? '⏳ Not claimable yet — you\'ll get another ping when the count starts moving'
+      : `🟢 Already claiming — ${nf(claimed)} claimed`;
   return {
-    title: kind === 'started' ? `🚨 Claim now: ${item.n}` : `✨ New drop: ${item.n}`,
-    message: [
+    title: `${kind === 'started' ? '🚨 Claiming started' : '✨ New drop'}: ${item.n}`.slice(0, 256),
+    url: catalog,
+    color: kind === 'started' ? COLOR_STARTED : COLOR_NEW,
+    description: [
       status,
-      `${nf(item.r)} / ${nf(item.t)} left · added ${ago(item.a)}`,
-      item.g ? `Game: ${item.g}` : 'No game listed',
+      game ? `🎮 **[${md(item.g || 'Open game')}](${game})**` : '🎮 No game listed',
+      `[View on Roblox catalog](${catalog})`,
     ].join('\n'),
-    priority: kind === 'started' ? 5 : 3,
-    tags: kind === 'started' ? ['rotating_light'] : ['sparkles'],
-    click: game || catalog,
-    attach: item.th ? png(item.th) : undefined,
-    actions: [
-      game && { action: 'view', label: 'Open game', url: game, clear: true },
-      { action: 'view', label: 'Catalog', url: catalog },
-    ].filter(Boolean),
+    fields: [
+      { name: 'Copies left', value: `${nf(item.r)} / ${nf(item.t)}`, inline: true },
+      { name: 'Added', value: `<t:${item.a}:R>`, inline: true },
+    ],
+    thumbnail: item.th ? { url: item.th } : undefined,
+    timestamp: new Date().toISOString(),
   };
 }
 
-// Claim-started alerts go out one by one (they're the time-critical ones); a burst of new drops
-// becomes one summary so the phone isn't flooded.
-async function send(events, siteUrl) {
-  for (const e of events.filter((e) => e.kind === 'started')) await ntfy(alert(e.item, 'started'));
-  const fresh = events.filter((e) => e.kind === 'new').map((e) => e.item);
-  if (fresh.length <= MAX_SINGLE_NEW) {
-    for (const it of fresh) await ntfy(alert(it, 'new'));
-  } else {
-    const waiting = fresh.filter((it) => it.r === it.t).length;
-    await ntfy({
-      title: `✨ ${fresh.length} new drops`,
-      message: fresh.slice(0, 12).map((it) => `• ${it.n} — ${nf(it.r)}/${nf(it.t)}`).join('\n') +
-        (fresh.length > 12 ? `\n…and ${fresh.length - 12} more` : '') +
-        (waiting ? `\n\n${waiting} not claimable yet — you'll get an urgent alert when they start.` : ''),
-      priority: 3,
-      tags: ['sparkles'],
-      click: siteUrl,
-    });
+// Discord allows 10 embeds per message; claim-started first since those are time-critical.
+async function send(events) {
+  const mention = env('DISCORD_MENTION');
+  const started = events.filter((e) => e.kind === 'started');
+  const fresh = events.filter((e) => e.kind === 'new');
+  for (const [group, withMention] of [[started, true], [fresh, false]]) {
+    for (let i = 0; i < group.length; i += 10) {
+      const chunk = group.slice(i, i + 10);
+      await discord({
+        content: withMention && mention && i === 0 ? mention : undefined,
+        embeds: chunk.map((e) => embed(e.item, e.kind)),
+        allowed_mentions: { parse: ['everyone', 'roles', 'users'] },
+      });
+    }
   }
 }
 
@@ -113,15 +110,13 @@ export default async function handler(req, res) {
 
   try {
     const minTotal = Number(env('MIN_TOTAL')) || 500;
-    const siteUrl = req.headers.host ? `https://${req.headers.host}/` : undefined;
     const now = Math.floor(Date.now() / 1000);
     const items = (await fetchItems(now - TRACK_DAYS * 86400)).filter((it) => it.t >= minTotal);
 
     if (req.query.test) {
       const sample = items.find((it) => it.r < it.t) || items[0];
       if (!sample) return res.status(200).json({ ok: true, note: 'no items to use as a sample' });
-      const msg = alert(sample, 'started');
-      await ntfy({ ...msg, title: `🧪 Test — ${msg.title}` });
+      await discord({ content: '🧪 Test alert from Free Limiteds Board', embeds: [embed(sample, 'started')] });
       return res.status(200).json({ ok: true, sent: 'test', item: sample.n });
     }
 
@@ -154,17 +149,14 @@ export default async function handler(req, res) {
     if (req.query.dry) return res.status(200).json({ ...summary, dry: true });
 
     if (!prev) {
-      await ntfy({
-        title: '👀 Watcher online',
-        message: `Tracking ${items.length} free limiteds with ${nf(minTotal)}+ copies, ${waiting} not claimable yet. ` +
-          'You\'ll get an urgent alert when one starts moving.',
-        tags: ['eyes'],
-        click: siteUrl,
+      await discord({
+        content: `👀 Watcher online — tracking **${items.length}** free limiteds with ${nf(minTotal)}+ copies, ` +
+          `**${waiting}** not claimable yet. You'll be pinged when one starts moving or a new one drops.`,
       });
     } else if (events.length) {
-      await send(events, siteUrl);
+      await send(events);
     }
-    // Save only after ntfy accepted everything, so a failed send is retried next run.
+    // Save only after Discord accepted everything, so a failed post is retried next run.
     await redis(['SET', STATE_KEY, JSON.stringify(next)]);
     return res.status(200).json(summary);
   } catch (err) {
