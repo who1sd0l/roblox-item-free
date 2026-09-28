@@ -4,6 +4,10 @@
     "api/items.js": {
       "maxDuration": 30,
       "memory": 1024
+    },
+    "api/watch.js": {
+      "maxDuration": 30,
+      "memory": 1024
     }
   }
 }
