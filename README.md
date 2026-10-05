@@ -14,7 +14,7 @@ only ever talks to `/api/items` on your own domain.
 ## Layout
 
 ```
-api/_lib/          shared Rolimon's scraper (not an endpoint)
+api/_lib/          shared Rolimon's scraper + Roblox stock reader (not endpoints)
 api/items.js       JSON feed for the board
 api/watch.js       Discord alerts for 500+ copy items
 public/index.html  the board (static, fetches /api/items on open)
@@ -41,14 +41,24 @@ Run `vercel dev` for a local server at http://localhost:3000 with the API workin
 
 ## Discord alerts
 
-`/api/watch` watches every in-stock free limited released this year with **500+ total copies** and
-posts to a Discord channel when one:
+`/api/watch` watches every in-stock free limited released this year with **500+ total copies**.
+Rolimon's is only used to find which items exist (every 5 minutes). **Copies left come straight
+from Roblox's catalog API every run**, so alerts don't wait on Rolimon's update lag, and items Roblox
+marks Off Sale or sold out are skipped. If Roblox refuses a request, that run uses Rolimon's numbers.
 
-- **starts being claimed**: it sat untouched (copies left = total) and the count just moved
-- **is still claimable**: an older item's stock moved after 12 hours of no movement (or for the
-  first time since the watcher started). It won't ping again while it keeps moving, only after it
-  goes quiet for 12 hours and moves again. More than 4 at once arrive as one list.
-- **drops**: it's new since the last check (the alert says whether it's claimable yet)
+Alerts (new messages, so they notify):
+
+- **🚨 Claiming started**: an untouched item (copies left = total) just started moving
+- **🔥 Claiming reopened**: an item that was quiet for 24h+ got 5+ claims within 30 minutes. One
+  person claiming a leftover copy doesn't count, which is what made the old "still claimable"
+  alert so noisy.
+- **✨ New drop**: it's new since the last check (the alert says whether it's claimable yet)
+
+More than 4 of one kind in the same check arrive as a single list.
+
+**Live board**: one message the watcher edits in place every minute, listing what's being claimed
+right now (claims in the last hour) and what's waiting to start. Edits don't notify, so pin it and
+glance at it whenever. If it's deleted, the next run posts a new one.
 
 It remembers the previous numbers in Upstash Redis and needs something to call it every minute.
 
@@ -59,9 +69,11 @@ It remembers the previous numbers in Upstash Redis and needs something to call i
 3. **Env vars**: Vercel project → Settings → Environment Variables:
    - `DISCORD_WEBHOOK_URL`: the webhook URL
    - `WATCH_SECRET`: any long random string (stops strangers triggering it)
-   - `DISCORD_MENTION` *(optional)*: e.g. `@everyone`, added to claim-started alerts so they ping
+   - `DISCORD_MENTION` *(optional)*: e.g. `@everyone`, added to started / reopened alerts
    - `MIN_TOTAL` *(optional)*: minimum total copies, default `500`
-   - `IDLE_HOURS` *(optional)*: how long an item must be quiet before a "still claimable" alert, default `12`
+   - `DORMANT_HOURS` *(optional)*: how long an item must be quiet to count as reopened, default `24`
+   - `REOPEN_MIN` *(optional)*: claims needed within 30 minutes to count as reopened, default `5`
+   - `DISCORD_BOARD` *(optional)*: `off` to disable the live board
 
    Then redeploy so the function picks them up.
 4. **Test**: open `https://YOUR-SITE.vercel.app/api/watch?key=WATCH_SECRET&test=1`; a sample alert
@@ -70,9 +82,10 @@ It remembers the previous numbers in Upstash Redis and needs something to call i
    `https://YOUR-SITE.vercel.app/api/watch?key=WATCH_SECRET` every 1 minute. Vercel's own cron
    only runs once a day on the free plan, which is too slow for this.
 
-The first run posts "Watcher online" and just records the baseline; alerts start from the second
-run. `?dry=1` shows what would be sent without sending or saving. Alerts can only be as fast as
-Rolimon's updates its own numbers.
+The very first run posts "Watcher online" and records a baseline. Any run where the stock source
+changed (Roblox ↔ Rolimon's fallback, or an upgrade) also only records, because the two sources
+disagree and the difference would look like claims. `?dry=1` shows what would be sent without
+sending or saving; the JSON response says which source was used (`"source":"roblox"`).
 
 ## Tuning
 
