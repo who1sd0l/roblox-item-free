@@ -9,6 +9,8 @@
 //   - "Claiming started"   an untouched item (copies left = total) has started moving
 //   - "Claiming reopened"  an item quiet for DORMANT_HOURS got REOPEN_MIN+ claims within 30 minutes
 //                          (single stragglers trickling in don't count)
+//   - "Still claimable"    the first claim the watcher sees on an older item. Once per item, ever;
+//                          sent as one list linking to the site's "Still claimable" tab
 //   - "New drop"           an item that wasn't tracked last run
 // Live board: one message that is edited in place every run (edits don't notify), listing what is
 // being claimed right now and what is waiting to start. Pin it in the channel.
@@ -16,28 +18,34 @@
 // Env: DISCORD_WEBHOOK_URL, WATCH_SECRET, KV_REST_API_URL + KV_REST_API_TOKEN
 //      (or UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN). Optional: MIN_TOTAL (default 500),
 //      DORMANT_HOURS (default 24), REOPEN_MIN (default 5), DISCORD_MENTION (e.g. "@everyone",
-//      added to started/reopened alerts), DISCORD_BOARD=off to disable the live board.
+//      added to started/reopened alerts), DISCORD_BOARD=off to disable the live board,
+//      SITE_URL (defaults to the host this endpoint was called on) for links to the board.
 // Query: ?test=1 sends a sample alert; ?dry=1 reports what would happen without sending or saving.
 
 import { fetchItems } from './_lib/rolimons.js';
 import { fetchStock } from './_lib/roblox.js';
+import { redis, STATE_KEY, META_KEY } from './_lib/redis.js';
 
-// v3 state: { ts, src, slot, board, items: { id: { r, m, q, w? } } }
+// v3 state: { ts, src, slot, board, items: { id: { r, m, q, s?, c?, w? } } }
 //   r = copies left, m = last time it moved, q = copies left at the last few 15-min marks,
+//   s = last time a claim was actually observed (read by /api/claimable), c = already announced,
 //   w = [copiesLeftWhenWoken, wokeAt, quietSince] while a dormant item is being watched for a reopen
 //   src = which source the numbers came from. Rolimon's lags Roblox, so comparing one against the
 //   other would look like movement: a run where the source changed only records, it never alerts.
 // meta: { ts, items: { id: Rolimon's row } }, the list of tracked items (refreshed every META_TTL).
-const STATE_KEY = 'flb:watch:v3';
-const META_KEY = 'flb:watch:meta';
 const LEGACY_KEY = 'flb:watch:v2';
 const META_TTL = 300;
 const SLOT = 900;          // activity sample every 15 minutes...
 const SLOTS = 5;           // ...keeping five, so q[0] is roughly an hour old
 const REOPEN_WINDOW = 1800;
 const MAX_CARDS = 4;       // more alerts of one kind than this in a run are sent as a single list
-const COLORS = { started: 0x22c55e, reopened: 0xf59e0b, new: 0x7c5cff, board: 0x2b2d31 };
-const TITLES = { started: '🚨 Claiming started', reopened: '🔥 Claiming reopened', new: '✨ New drop' };
+const COLORS = { started: 0x22c55e, reopened: 0xf59e0b, claimable: 0x14b8a6, new: 0x7c5cff, board: 0x2b2d31 };
+const TITLES = {
+  started: '🚨 Claiming started',
+  reopened: '🔥 Claiming reopened',
+  claimable: '✅ Still claimable',
+  new: '✨ New drop',
+};
 
 const env = (k) => (process.env[k] || '').trim();
 const nf = (n) => n.toLocaleString('en-US');
@@ -46,20 +54,6 @@ const md = (s) => s.replace(/[\[\]\\*_~`|]/g, '\\$&');
 const cut = (s, n) => (s.length > n ? s.slice(0, n - 1) + '…' : s);
 const catalogUrl = (it) => `https://www.roblox.com/catalog/${it.i}/`;
 const gameUrl = (it) => (it.gi ? `https://www.roblox.com/games/${it.gi}` : '');
-
-async function redis(cmd) {
-  const url = env('KV_REST_API_URL') || env('UPSTASH_REDIS_REST_URL');
-  const token = env('KV_REST_API_TOKEN') || env('UPSTASH_REDIS_REST_TOKEN');
-  if (!url || !token) throw new Error('Redis is not configured (KV_REST_API_URL / KV_REST_API_TOKEN)');
-  const r = await fetch(url, {
-    method: 'POST',
-    headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
-    body: JSON.stringify(cmd),
-  });
-  const j = await r.json().catch(() => ({}));
-  if (!r.ok || j.error) throw new Error(`Redis ${cmd[0]} failed: ${j.error || r.status}`);
-  return j.result;
-}
 
 // POSTs a new message, or PATCHes an existing one when messageId is given. Returns Discord's
 // message object, or null when the message to edit no longer exists.
@@ -123,19 +117,26 @@ function list(kind, events) {
   for (const e of events) {
     const { item } = e;
     const game = item.gi ? ` · [${md(cut(item.g || 'game', 40))}](${gameUrl(item)})` : '';
-    const extra = kind === 'reopened' ? `, +${nf(e.claimed)} just now` : '';
+    const extra = kind === 'reopened' || kind === 'claimable' ? `, +${nf(e.claimed)} just now` : '';
     const line = `• **[${md(cut(item.n, 60))}](${catalogUrl(item)})** — ${nf(item.r)}/${nf(item.t)} left${extra}${game}`;
     if (lines.join('\n').length + line.length > 3900) { lines.push(`…and ${events.length - lines.length} more`); break; }
     lines.push(line);
   }
-  return { title: `${TITLES[kind]} · ${events.length} items`, color: COLORS[kind], description: lines.join('\n') };
+  return { title: `${TITLES[kind]} · ${events.length} item${events.length === 1 ? '' : 's'}`, color: COLORS[kind], description: lines.join('\n') };
 }
 
-async function sendAlerts(events) {
+async function sendAlerts(events, claimableUrl) {
   const mention = env('DISCORD_MENTION');
-  for (const [kind, ping] of [['started', true], ['reopened', true], ['new', false]]) {
+  for (const [kind, ping] of [['started', true], ['reopened', true], ['claimable', false], ['new', false]]) {
     const group = events.filter((e) => e.kind === kind);
     if (!group.length) continue;
+    // "Still claimable" is low-priority catch-up info: always one quiet list with a link to the site.
+    if (kind === 'claimable') {
+      const embed = list(kind, group);
+      if (claimableUrl) embed.description += `\n\n**[See every still-claimable item →](${claimableUrl})**`;
+      await discord({ embeds: [embed] });
+      continue;
+    }
     const embeds = group.length > MAX_CARDS ? [list(kind, group)] : group.map(card);
     await discord({
       content: ping && mention ? mention : undefined,
@@ -147,7 +148,7 @@ async function sendAlerts(events) {
 
 /* ---------- live board (edited in place) ---------- */
 
-function boardPayload(rows, now, source) {
+function boardPayload(rows, now, source, claimableUrl) {
   const line = (x, extra) => {
     const game = x.item.gi ? ` · [${md(cut(x.item.g || 'game', 32))}](${gameUrl(x.item)})` : '';
     return `**[${md(cut(x.item.n, 48))}](${catalogUrl(x.item)})** — ${nf(x.item.r)}/${nf(x.item.t)}${extra}${game}`;
@@ -175,7 +176,8 @@ function boardPayload(rows, now, source) {
       {
         color: COLORS.board,
         description: `Tracking **${rows.length}** items · ${lowest.length} almost gone · ` +
-          `stock from ${source} · updated <t:${now}:R>`,
+          `stock from ${source} · updated <t:${now}:R>` +
+          (claimableUrl ? `\n**[All still-claimable items →](${claimableUrl})**` : ''),
       },
     ],
   };
@@ -194,6 +196,9 @@ export default async function handler(req, res) {
     const dormant = (Number(env('DORMANT_HOURS')) || 24) * 3600;
     const reopenMin = Number(env('REOPEN_MIN')) || 5;
     const now = Math.floor(Date.now() / 1000);
+    const host = req.headers['x-forwarded-host'] || req.headers.host;
+    const site = (env('SITE_URL') || (host ? `https://${host}` : '')).replace(/\/+$/, '');
+    const claimableUrl = site ? `${site}/#tab=claimable` : '';
     const yearStart = Math.floor(Date.UTC(new Date().getUTCFullYear(), 0, 1) / 1000);
 
     const [rawState, rawMeta, rawLegacy] = await redis(['MGET', STATE_KEY, META_KEY, LEGACY_KEY]);
@@ -203,7 +208,7 @@ export default async function handler(req, res) {
     let metaFresh = false;
     const refreshMeta = async () => {
       const rows = (await fetchItems(yearStart)).filter((it) => it.t >= minTotal);
-      meta = { ts: now, items: Object.fromEntries(rows.map(({ i, n, a, r, t, g, gi, th }) => [i, { i, n, a, r, t, g, gi, th }])) };
+      meta = { ts: now, items: Object.fromEntries(rows.map(({ i, n, a, r, t, g, gi, gx, ty, th }) => [i, { i, n, a, r, t, g, gi, gx, ty, th }])) };
       metaFresh = true;
     };
     if (!meta || now - meta.ts >= META_TTL || req.query.refresh) await refreshMeta();
@@ -253,6 +258,9 @@ export default async function handler(req, res) {
     for (const item of items) {
       const p = prev && prev.items[item.i];
       const cur = { r: item.r, m: p ? p.m : now, q: p ? p.q : [item.r] };
+      if (p && p.s) cur.s = p.s;
+      if (p && p.c) cur.c = 1;
+      const before = events.length;
       if (p && !compare) {
         // Different source than last run: carry the history over but don't read anything into
         // the jump in numbers. Activity samples restart from this source's numbers.
@@ -265,6 +273,7 @@ export default async function handler(req, res) {
           if (p.r >= item.t && item.r < item.t) events.push({ kind: 'started', item });
           else if (!w && now - p.m >= dormant) w = [p.r, now, p.m];
           cur.m = now;
+          cur.s = now;
         }
         if (w) {
           const claimed = w[0] - item.r;
@@ -274,10 +283,16 @@ export default async function handler(req, res) {
             cur.w = w; // still waiting to see if this is real activity or a straggler
           }
         }
+        // First claim ever seen on an item nothing else announced: one quiet "still claimable".
+        if (moved > 0 && !cur.c && events.length === before) {
+          events.push({ kind: 'claimable', item, claimed: moved });
+        }
       } else if (prev && item.a >= prev.ts - 3600) {
         // Only brand-new additions; not old items that crossed MIN_TOTAL or came back into stock.
         events.push({ kind: 'new', item });
       }
+      // Anything announced as claiming counts, so it never gets a separate "still claimable".
+      if (events.length > before && item.r < item.t) cur.c = 1;
       if (!prev || prev.slot !== slot) cur.q = [...cur.q, item.r].slice(-SLOTS);
       next.items[item.i] = cur;
       rows.push({ item, hour: Math.max(0, cur.q[0] - item.r) });
@@ -294,6 +309,7 @@ export default async function handler(req, res) {
       firstRun: !prev,
       started: events.filter((e) => e.kind === 'started').map((e) => e.item.n),
       reopened: events.filter((e) => e.kind === 'reopened').map((e) => e.item.n),
+      stillClaimable: events.filter((e) => e.kind === 'claimable').map((e) => e.item.n),
       new: events.filter((e) => e.kind === 'new').map((e) => e.item.n),
     };
     if (req.query.dry) return res.status(200).json({ ...summary, dry: true });
@@ -305,13 +321,13 @@ export default async function handler(req, res) {
           'comes back to life, or a new one drops. The board below updates itself — pin it.',
       });
     } else if (events.length) {
-      await sendAlerts(events);
+      await sendAlerts(events, claimableUrl);
     }
 
     // The board is a nice-to-have; never let it block alerts or the state save.
     if (env('DISCORD_BOARD').toLowerCase() !== 'off') {
       try {
-        const payload = boardPayload(rows, now, source === 'roblox' ? 'Roblox' : "Rolimon's (Roblox unavailable)");
+        const payload = boardPayload(rows, now, source === 'roblox' ? 'Roblox' : "Rolimon's (Roblox unavailable)", claimableUrl);
         const edited = next.board && (await discord(payload, next.board));
         if (!edited) next.board = (await discord(payload)).id;
         summary.board = 'ok';

@@ -146,6 +146,19 @@
   .refresh[disabled] svg{animation:spin .8s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
 
+  /* ---------- tabs ---------- */
+  .tabs{display:flex;gap:4px;max-width:1240px;margin:0 auto 10px;border-bottom:1px solid var(--line)}
+  .tabs button{position:relative;display:inline-flex;align-items:center;gap:8px;border:0;background:none;cursor:pointer;font-size:14px;font-weight:600;color:var(--ink-3);padding:8px 12px 11px}
+  .tabs button:hover{color:var(--ink)}
+  .tabs button[aria-selected="true"]{color:var(--ink)}
+  .tabs button[aria-selected="true"]::after{content:"";position:absolute;left:8px;right:8px;bottom:-1px;height:2px;border-radius:2px;background:var(--accent)}
+  .tabs .tc{font-family:"IBM Plex Mono",monospace;font-size:11px;font-weight:500;color:var(--ink-2);background:var(--panel-2);border:1px solid var(--line);border-radius:99px;padding:0 7px;line-height:18px}
+  .tabs .tc:empty{display:none}
+  .tabs button[data-v="claimable"] .tc{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 35%,var(--line))}
+  .note{max-width:1240px;margin:0 auto 8px;font-size:12.5px;color:var(--ink-3)}
+  .note b{color:var(--ink-2);font-weight:600}
+  .b.claimed{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 40%,transparent)}
+
   /* ---------- grid view ---------- */
   .board{margin-top:18px}
   .board.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(212px,1fr));gap:14px}
@@ -260,6 +273,11 @@
   </header>
 
   <div class="controls" id="controls">
+    <div class="tabs" role="tablist" id="tabs">
+      <button type="button" role="tab" data-v="all" aria-selected="true">All in stock <span class="tc" id="tc-all"></span></button>
+      <button type="button" role="tab" data-v="claimable" aria-selected="false" title="Items the watcher saw being claimed on Roblox in the last 24 hours">Still claimable <span class="tc" id="tc-claim"></span></button>
+    </div>
+    <p class="note" id="claim-note" hidden></p>
     <div class="crow">
       <label class="search">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
@@ -279,13 +297,7 @@
     </div>
     <div class="crow">
       <span class="lbl">Sort</span>
-      <div class="sel"><select id="sort" aria-label="Sort order">
-        <option value="new">Newest first</option>
-        <option value="hot">Hottest (claims / hr)</option>
-        <option value="stock">Most copies left</option>
-        <option value="pct">Most % left</option>
-        <option value="low">Almost gone</option>
-      </select></div>
+      <div class="sel"><select id="sort" aria-label="Sort order"></select></div>
       <span class="lbl">Type</span>
       <div class="sel"><select id="type" aria-label="Item type"><option value="">All types</option></select></div>
       <div class="seg" role="group" aria-label="Minimum stock" id="min">
@@ -325,8 +337,16 @@
   };
   var RANGES = { day: 86400, week: 7 * 86400, month: 30 * 86400 };
 
+  // Each tab has its own sort menu; the first entry is that tab's default.
+  var SORT_OPTS = {
+    all: [['new', 'Newest first'], ['hot', 'Hottest (claims / hr)'], ['stock', 'Most copies left'], ['pct', 'Most % left'], ['low', 'Almost gone']],
+    claimable: [['active', 'Most active now'], ['recent', 'Last claimed'], ['new', 'Newest first'], ['stock', 'Most copies left'], ['low', 'Almost gone']]
+  };
+
   var rows = [], view = [], shown = PAGE, fetchedAt = null, lastSeen = 0, knownIds = null, pendingNew = 0;
-  var state = { range: 'month', min: 1, q: '', sort: 'new', type: '', game: '', view: 'grid', onlyNew: false };
+  // "Still claimable" tab: items the Discord watcher saw being claimed on Roblox (/api/claimable).
+  var claimRows = [], claimInfo = null, claimErr = null, claimFetched = 0;
+  var state = { tab: 'all', range: 'month', min: 1, q: '', sort: 'new', type: '', game: '', view: 'grid', onlyNew: false };
 
   var $ = function (id) { return document.getElementById(id); };
   var board = $('board'), countEl = $('count'), moreEl = $('more'), stampEl = $('stamp'), liveEl = $('live');
@@ -364,9 +384,11 @@
   var DEFAULTS = JSON.parse(JSON.stringify(state));
   function readHash() {
     var p = new URLSearchParams(location.hash.slice(1));
+    state.tab = p.get('tab') === 'claimable' ? 'claimable' : 'all';
+    state.sort = SORT_OPTS[state.tab][0][0];
     if (RANGES[p.get('range')] || p.get('range') === 'year') state.range = p.get('range');
     if (['1', '100', '1000'].indexOf(p.get('min')) !== -1) state.min = +p.get('min');
-    if (p.get('sort') && sortEl.querySelector('option[value="' + p.get('sort') + '"]')) state.sort = p.get('sort');
+    if (SORT_OPTS[state.tab].some(function (o) { return o[0] === p.get('sort'); })) state.sort = p.get('sort');
     state.q = p.get('q') || '';
     state.type = p.get('type') || '';
     state.game = p.get('game') || '';
@@ -375,9 +397,12 @@
   }
   function writeHash() {
     var p = new URLSearchParams();
-    ['range', 'min', 'sort', 'q', 'type', 'game'].forEach(function (k) {
+    if (state.tab !== 'all') p.set('tab', state.tab);
+    ['range', 'min', 'q', 'type', 'game'].forEach(function (k) {
+      if (state.tab === 'claimable' && (k === 'range' || k === 'min')) return;
       if (state[k] !== DEFAULTS[k]) p.set(k, state[k]);
     });
+    if (state.sort !== SORT_OPTS[state.tab][0][0]) p.set('sort', state.sort);
     var h = p.toString();
     history.replaceState(null, '', h ? '#' + h : location.pathname + location.search);
   }
@@ -388,15 +413,17 @@
     hot: function (a, b) { return rate(b) - rate(a) || b.a - a.a; },
     stock: function (a, b) { return b.r - a.r || b.a - a.a; },
     pct: function (a, b) { return pctLeft(b) - pctLeft(a) || b.r - a.r; },
-    low: function (a, b) { return a.r - b.r || pctLeft(a) - pctLeft(b) || b.a - a.a; }
+    low: function (a, b) { return a.r - b.r || pctLeft(a) - pctLeft(b) || b.a - a.a; },
+    active: function (a, b) { return (b.hour || 0) - (a.hour || 0) || (b.seen || 0) - (a.seen || 0); },
+    recent: function (a, b) { return (b.seen || 0) - (a.seen || 0); }
   };
 
   function apply(keepPage) {
-    var q = state.q.trim().toLowerCase();
-    view = rows.filter(function (r) {
-      if (!inRange(r)) return false;
-      if (r.r < state.min) return false;
-      if (state.onlyNew && !isNew(r)) return false;
+    var q = state.q.trim().toLowerCase(), claim = state.tab === 'claimable';
+    view = (claim ? claimRows : rows).filter(function (r) {
+      if (!claim && !inRange(r)) return false;
+      if (!claim && r.r < state.min) return false;
+      if (!claim && state.onlyNew && !isNew(r)) return false;
       if (state.type && typeLabel(r.ty) !== state.type) return false;
       if (state.game && r.gi !== state.game) return false;
       if (q && (r.n + ' ' + r.g).toLowerCase().indexOf(q) === -1) return false;
@@ -410,6 +437,23 @@
   }
 
   function syncControls() {
+    var claim = state.tab === 'claimable';
+    Array.prototype.forEach.call($('tabs').querySelectorAll('button'), function (b) {
+      b.setAttribute('aria-selected', String(b.getAttribute('data-v') === state.tab));
+    });
+    $('range').hidden = claim;
+    $('min').hidden = claim;
+    $('claim-note').hidden = !claim;
+    if (claim) {
+      $('claim-note').innerHTML = claimInfo
+        ? 'Items with <b>500+ copies</b> that were seen being claimed on Roblox in the last ' + claimInfo.windowHours +
+          ' hours, so you can still get them · checked ' + rel(Date.parse(claimInfo.updatedAt) / 1000)
+        : 'Items the alert watcher saw being claimed on Roblox in the last 24 hours.';
+    }
+    if (sortEl.getAttribute('data-tab') !== state.tab) {
+      sortEl.innerHTML = SORT_OPTS[state.tab].map(function (o) { return '<option value="' + o[0] + '">' + o[1] + '</option>'; }).join('');
+      sortEl.setAttribute('data-tab', state.tab);
+    }
     [['range', state.range], ['min', String(state.min)], ['view', state.view]].forEach(function (g) {
       Array.prototype.forEach.call($(g[0]).querySelectorAll('button'), function (b) {
         b.setAttribute('aria-pressed', String(b.getAttribute('data-v') === g[1]));
@@ -421,7 +465,7 @@
     $('s-new-btn').setAttribute('aria-pressed', String(state.onlyNew));
     var chip = $('gamechip');
     if (state.game) {
-      var hit = rows.find(function (r) { return r.gi === state.game; });
+      var hit = rows.concat(claimRows).find(function (r) { return r.gi === state.game; });
       $('gamechip-t').textContent = 'Game: ' + (hit ? hit.g : state.game);
       chip.hidden = false;
     } else chip.hidden = true;
@@ -438,7 +482,9 @@
     return {
       cat: cat,
       nw: isNew(r),
-      age: '<span class="b age' + (fresh ? ' fresh' : '') + '" title="' + esc(fullDate(r.a)) + '">' + rel(r.a) + '</span>',
+      age: r.seen
+        ? '<span class="b age claimed" title="Last claim seen ' + esc(fullDate(r.seen)) + '">✓ ' + rel(r.seen) + '</span>'
+        : '<span class="b age' + (fresh ? ' fresh' : '') + '" title="' + esc(fullDate(r.a)) + '">' + rel(r.a) + '</span>',
       type: r.ty ? '<span class="b">' + esc(typeLabel(r.ty)) + '</span>' : '',
       game: r.gi
         ? '<button type="button" class="gamebtn" data-game="' + esc(r.gi) + '" title="Show everything from ' + esc(r.g) + '">' + esc(r.g || 'Untitled game') + '</button>' +
@@ -446,7 +492,9 @@
         : '<span>No game listed</span>',
       stock:
         '<div class="stock"><div class="nums"><span><b>' + nf(r.r) + '</b> / ' + compact(r.t) + ' left</span>' +
-        (state.sort === 'hot' ? '<span class="rate">' + compact(Math.round(rate(r))) + '/hr</span>' : '<span class="pct">' + (p < 0.01 ? '&lt;1' : Math.round(p * 100)) + '%</span>') +
+        (r.hour ? '<span class="rate" title="Claims in about the last hour">+' + compact(r.hour) + '/hr</span>'
+          : state.sort === 'hot' ? '<span class="rate">' + compact(Math.round(rate(r))) + '/hr</span>'
+          : '<span class="pct">' + (p < 0.01 ? '&lt;1' : Math.round(p * 100)) + '%</span>') +
         '</div><div class="track"><i class="fill ' + (p <= 0.1 || r.r <= 3 ? 'crit' : p <= 0.35 || r.r <= 20 ? 'warn' : 'ok') + '" style="width:' + Math.max(2, Math.round(p * 100)) + '%"></i></div></div>',
       actions:
         '<div class="actions">' +
@@ -487,6 +535,16 @@
 
   function render() {
     countEl.textContent = nf(view.length) + ' item' + (view.length === 1 ? '' : 's');
+    if (!view.length && state.tab === 'claimable') {
+      var any = state.q || state.type || state.game;
+      board.innerHTML = '<div class="empty"><b>' +
+        (claimErr ? 'The alert watcher hasn\'t reported yet.' : any ? 'Nothing matches.' : 'Nothing claimed in the last 24 hours.') + '</b>' +
+        (claimErr ? 'This tab fills in once /api/watch is running every minute (' + esc(claimErr) + ').'
+          : any ? '' : 'Items show up here as soon as someone claims a copy on Roblox.') +
+        (any ? '<br><button class="more" type="button" id="reset">Clear filters</button>' : '') + '</div>';
+      moreEl.hidden = true;
+      return;
+    }
     if (!view.length) {
       var filtered = state.q || state.type || state.game || state.min > 1 || state.onlyNew;
       board.innerHTML = '<div class="empty"><b>' + (rows.length ? 'Nothing matches.' : 'No items yet.') + '</b>' +
@@ -524,6 +582,7 @@
     $('s-day').textContent = nf(day);
     $('s-month').textContent = nf(month);
     $('s-copies').textContent = compact(copies);
+    $('tc-all').textContent = nf(rows.length);
     $('s-new').textContent = lastSeen ? nf(fresh) : '—';
     $('s-new-l').textContent = lastSeen ? 'new since last visit' : 'first visit — welcome';
     $('s-new-btn').disabled = !lastSeen;
@@ -607,6 +666,23 @@
       });
   }
 
+  function loadClaimable(bust) {
+    claimFetched = Date.now();
+    return fetch('/api/claimable' + (bust ? '?t=' + Date.now() : ''))
+      .then(function (r) {
+        return r.json().catch(function () { return {}; }).then(function (j) {
+          if (!r.ok) throw new Error(j.error || 'HTTP ' + r.status);
+          return j;
+        });
+      })
+      .then(function (d) { claimRows = d.items || []; claimInfo = d; claimErr = null; })
+      .catch(function (err) { claimErr = err.message; })
+      .then(function () {
+        $('tc-claim').textContent = claimErr ? '' : nf(claimRows.length);
+        if (state.tab === 'claimable') apply(true);
+      });
+  }
+
   /* ---------- events ---------- */
   function segClick(id, fn) {
     $(id).addEventListener('click', function (e) {
@@ -614,6 +690,15 @@
       if (b) fn(b.getAttribute('data-v'));
     });
   }
+  $('tabs').addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-v]');
+    if (!b || b.getAttribute('data-v') === state.tab) return;
+    state.tab = b.getAttribute('data-v');
+    state.sort = SORT_OPTS[state.tab][0][0];
+    state.onlyNew = false;
+    apply();
+    if (state.tab === 'claimable' && Date.now() - claimFetched > 60000) loadClaimable(false);
+  });
   segClick('range', function (v) { state.range = v; apply(); });
   segClick('min', function (v) { state.min = +v; apply(); });
   segClick('view', function (v) { state.view = v; store('flb-view', v); apply(true); });
@@ -628,11 +713,15 @@
   $('gamechip-x').addEventListener('click', function () { state.game = ''; apply(); });
   $('s-new-btn').addEventListener('click', function () {
     state.onlyNew = !state.onlyNew;
+    state.tab = 'all';
     if (state.onlyNew) { state.range = 'year'; state.sort = 'new'; }
     apply();
   });
   moreEl.addEventListener('click', function () { shown += PAGE; render(); });
-  refreshEl.addEventListener('click', function () { load(true, false); });
+  refreshEl.addEventListener('click', function () {
+    if (state.tab === 'claimable') loadClaimable(true).then(function () { toast(claimErr ? 'Refresh failed: ' + claimErr : nf(claimRows.length) + ' items still claimable'); });
+    else load(true, false);
+  });
 
   board.addEventListener('click', function (e) {
     var g = e.target.closest('[data-game]');
@@ -692,7 +781,12 @@
   readHash();
   syncControls();
   load(false, false);
+  loadClaimable(false);
   setInterval(stamp, 30000);
+  // The watcher updates every minute: keep the claimable tab fresh while it's open.
+  setInterval(function () {
+    if (!document.hidden && (state.tab === 'claimable' || Date.now() - claimFetched > POLL_MS)) loadClaimable(false);
+  }, 60000);
   setInterval(function () { load(false, true); }, POLL_MS);
   // Coming back to a stale tab: refresh right away instead of waiting for the next tick.
   document.addEventListener('visibilitychange', function () {

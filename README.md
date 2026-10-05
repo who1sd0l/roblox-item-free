@@ -16,7 +16,8 @@ only ever talks to `/api/items` on your own domain.
 ```
 api/_lib/          shared Rolimon's scraper + Roblox stock reader (not endpoints)
 api/items.js       JSON feed for the board
-api/watch.js       Discord alerts for 500+ copy items
+api/watch.js       Discord alerts for 500+ copy items (call every minute)
+api/claimable.js   items the watcher saw being claimed in the last 24h ("Still claimable" tab)
 public/index.html  the board (static, fetches /api/items on open)
 vercel.json        function memory / timeout
 ```
@@ -52,9 +53,16 @@ Alerts (new messages, so they notify):
 - **🔥 Claiming reopened**: an item that was quiet for 24h+ got 5+ claims within 30 minutes. One
   person claiming a leftover copy doesn't count, which is what made the old "still claimable"
   alert so noisy.
+- **✅ Still claimable**: the first claim the watcher ever sees on an older item. Sent **once per
+  item**, always as one quiet list (no mention) with a link to the site's **Still claimable** tab
 - **✨ New drop**: it's new since the last check (the alert says whether it's claimable yet)
 
 More than 4 of one kind in the same check arrive as a single list.
+
+**Still claimable tab** (`/#tab=claimable` on the site): every tracked item someone claimed on Roblox
+in the last 24 hours, sorted by claims in the last hour. It reads the watcher's saved data, so it
+only fills in once `/api/watch` is running. The alert links use the domain cron-job.org calls; set
+`SITE_URL` if you want them to point at a different domain.
 
 **Live board**: one message the watcher edits in place every minute, listing what's being claimed
 right now (claims in the last hour) and what's waiting to start. Edits don't notify, so pin it and
@@ -74,6 +82,7 @@ It remembers the previous numbers in Upstash Redis and needs something to call i
    - `DORMANT_HOURS` *(optional)*: how long an item must be quiet to count as reopened, default `24`
    - `REOPEN_MIN` *(optional)*: claims needed within 30 minutes to count as reopened, default `5`
    - `DISCORD_BOARD` *(optional)*: `off` to disable the live board
+   - `SITE_URL` *(optional)*: site address used in alert links, e.g. `https://my-board.vercel.app`
 
    Then redeploy so the function picks them up.
 4. **Test**: open `https://YOUR-SITE.vercel.app/api/watch?key=WATCH_SECRET&test=1`; a sample alert
