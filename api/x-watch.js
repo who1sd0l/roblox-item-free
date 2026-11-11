@@ -1,14 +1,15 @@
-// Free new-post alerts for public X accounts, using Teapawt/Nitter-compatible RSS feeds.
+// Free new-post alerts for public X accounts, using Jina Reader with RSS mirrors as fallback.
 // Call from an external cron: GET /api/x-watch?key=WATCH_SECRET
 //
 // Env: X_ACCOUNTS (comma-separated handles), X_DISCORD_WEBHOOK_URL, WATCH_SECRET, and the same
 // Redis variables used by /api/watch. Optional: X_WATCH_SECRET, X_DISCORD_MENTION,
 // X_INCLUDE_REPLIES=true, X_INCLUDE_REPOSTS=true, X_RSS_BASE_URLS (custom/self-hosted mirrors).
 // DISCORD_WEBHOOK_URL is used as a backward-compatible fallback when the X-specific URL is absent.
-// Query: ?test=1 sends a sample Discord message without fetching RSS;
+// Query: ?test=1 sends a sample Discord message without fetching X;
 //        ?dry=1 reports new posts without sending or saving.
 
 import { redis, X_STATE_KEY } from './_lib/redis.js';
+import { createHash } from 'node:crypto';
 
 // The first public RSS mirror accepts server-side Node requests. The Teapawt fallbacks explicitly
 // allow scraping, although some locations may receive a Cloudflare check. Custom/self-hosted URLs
@@ -24,8 +25,10 @@ const DEFAULT_RSS_BASES = [
   'https://teapawt.org',
 ];
 const MAX_ACCOUNTS = 10;
-const MAX_MIRRORS_PER_ACCOUNT = 5;
-const FETCH_TIMEOUT = 6500;
+const MAX_MIRRORS_PER_ACCOUNT = 2;
+const RSS_FETCH_TIMEOUT = 3500;
+const JINA_FETCH_TIMEOUT = 15000;
+const MAX_SEEN = 100;
 const env = (key) => (process.env[key] || '').trim();
 const enabled = (key) => /^(1|true|yes|on)$/i.test(env(key));
 const cut = (value, max) => value.length > max ? `${value.slice(0, max - 1)}…` : value;
@@ -53,10 +56,14 @@ function rssBases() {
   }))];
 }
 
-function laterId(a, b) {
-  if (!a) return b || null;
-  if (!b) return a;
-  return BigInt(a) > BigInt(b) ? a : b;
+function fingerprint(text, image) {
+  const normalizedText = String(text || '').toLowerCase().replace(/\s+/g, ' ').trim();
+  let normalizedImage = String(image || '');
+  try {
+    const url = new URL(normalizedImage);
+    normalizedImage = `${url.hostname}${url.pathname}`;
+  } catch { /* no image */ }
+  return `hash:${createHash('sha256').update(`${normalizedText}\n${normalizedImage}`).digest('hex').slice(0, 24)}`;
 }
 
 function unwrap(value) {
@@ -118,6 +125,7 @@ function parseFeed(xml, account) {
       || title.replace(/^RT\s+@.+?\s+\(by\s+@.+?\):\s*/i, '').replace(/^R to @.+?:\s*/i, '');
     posts.push({
       id,
+      key: `id:${id}`,
       username: account,
       creator: creator || account,
       name,
@@ -134,9 +142,88 @@ function parseFeed(xml, account) {
   return { name, avatar, posts };
 }
 
+function markdownText(value) {
+  return String(value || '')
+    .replace(/\[!\[[^\]]*\]\([^)]+\)\]\([^)]+\)/g, '')
+    .replace(/!\[[^\]]*\]\([^)]+\)/g, '')
+    .replace(/\[\d+\]\(https:\/\/x\.com\/compose\/[^)]*\)/gi, '')
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .replace(/<[^>]+>/g, '')
+    .replace(/^Pinned\s*/i, '')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+function parseJina(data, account) {
+  const content = String(data?.content || '');
+  if (!content) throw new Error('Reader returned no profile content');
+  const title = String(data?.title || '');
+  const name = title.replace(/\s+\(@[^)]*\).*$/, '').trim() || account;
+  const avatarMatch = content.match(/https:\/\/pbs\.twimg\.com\/profile_images\/[^)\s]+/i);
+  const avatar = avatarMatch ? avatarMatch[0] : null;
+  const heading = content.match(/\n## [^\n]+(?:’|'|’)s posts\s*\n/i);
+  const section = heading ? content.slice(heading.index + heading[0].length) : content;
+  const chunks = section.split(/^\* {3}/m).slice(1);
+  const escapedAccount = account.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const statusPattern = new RegExp(`\\[[^\\]]+\\]\\(https://x\\.com/${escapedAccount}/status/(\\d+)\\)`, 'i');
+  const profilePattern = new RegExp(`\\[[^\\]]*\\]\\(https://x\\.com/${escapedAccount}\\)`, 'gi');
+  const posts = [];
+
+  for (const chunk of chunks) {
+    const status = chunk.match(statusPattern);
+    const id = status?.[1] || null;
+    let body = status ? chunk.slice(status.index + status[0].length) : chunk;
+    body = body.replace(profilePattern, '').replace(/^\s*Pinned\s*/i, '');
+    const imageMatches = [...chunk.matchAll(/!\[[^\]]*\]\((https?:\/\/[^)\s]+)(?:\s+"[^"]*")?\)/gi)];
+    const image = imageMatches.map((match) => match[1]).find((url) =>
+      /pbs\.twimg\.com\/(media|ext_tw_video_thumb|amplify_video_thumb)\//i.test(url)) || null;
+    const handleMatches = [...chunk.matchAll(/\[@([a-z0-9_]+)\]\(https:\/\/x\.com\/[a-z0-9_]+\)/gi)];
+    // With a status link the leading handle is the author. Some X profile renders omit both the
+    // status link and author metadata; in that case, do not mistake a mentioned account for a repost.
+    const creator = status ? (handleMatches[0]?.[1] || account) : account;
+    const text = markdownText(body);
+    if (!id && !text && !image) continue;
+    const key = id ? `id:${id}` : fingerprint(text, image);
+    posts.push({
+      id,
+      key,
+      username: account,
+      creator,
+      name,
+      text,
+      createdAt: null,
+      url: id ? `https://x.com/${encodeURIComponent(account)}/status/${id}` : `https://x.com/${encodeURIComponent(account)}`,
+      avatar,
+      image,
+      repost: creator.toLowerCase() !== account.toLowerCase(),
+      reply: /Replying to|^R to @/i.test(chunk),
+    });
+  }
+  if (!posts.length) throw new Error('Reader profile contained no parseable posts');
+  return { name, avatar, posts };
+}
+
+async function fetchJinaAccount(account) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), JINA_FETCH_TIMEOUT);
+  try {
+    const response = await fetch(`https://r.jina.ai/https://x.com/${encodeURIComponent(account)}`, {
+      headers: { accept: 'application/json', 'x-no-cache': 'true' },
+      signal: controller.signal,
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const body = await response.json();
+    if (body.code && body.code !== 200) throw new Error(body.message || `Reader code ${body.code}`);
+    return { account, source: 'r.jina.ai', sourceType: 'jina', ...parseJina(body.data, account) };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function fetchText(url) {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
+  const timeout = setTimeout(() => controller.abort(), RSS_FETCH_TIMEOUT);
   try {
     const response = await fetch(url, {
       headers: {
@@ -153,7 +240,7 @@ async function fetchText(url) {
   }
 }
 
-async function fetchAccount(account, bases) {
+async function fetchRssAccount(account, bases) {
   const failures = [];
   for (const base of bases.slice(0, MAX_MIRRORS_PER_ACCOUNT)) {
     // A few accounts return 404 on the standard profile route while the with-replies route works.
@@ -162,7 +249,7 @@ async function fetchAccount(account, bases) {
     for (const suffix of suffixes) {
       try {
         const xml = await fetchText(`${base}/${encodeURIComponent(account)}${suffix}`);
-        return { account, source: new URL(base).hostname, ...parseFeed(xml, account) };
+        return { account, source: new URL(base).hostname, sourceType: 'rss', ...parseFeed(xml, account) };
       } catch (error) {
         const reason = error.name === 'AbortError' ? 'timeout' : error.message;
         failures.push(`${new URL(base).hostname}${suffix === '/rss' ? '' : ' (with replies)'}: ${reason}`);
@@ -170,6 +257,19 @@ async function fetchAccount(account, bases) {
     }
   }
   throw new Error(failures.join('; '));
+}
+
+async function fetchAccount(account, bases) {
+  try {
+    return await fetchJinaAccount(account);
+  } catch (jinaError) {
+    try {
+      return await fetchRssAccount(account, bases);
+    } catch (rssError) {
+      const jinaReason = jinaError.name === 'AbortError' ? 'timeout' : jinaError.message;
+      throw new Error(`Reader: ${jinaReason}; RSS: ${rssError.message}`);
+    }
+  }
 }
 
 function embedFor(post) {
@@ -243,7 +343,7 @@ export default async function handler(req, res) {
     }));
     const successful = results.filter((result) => result.ok);
     const failed = results.filter((result) => !result.ok).map(({ account, error }) => ({ account, error }));
-    if (!successful.length) throw new Error(`Every RSS feed failed: ${failed.map((x) => `${x.account}: ${x.error}`).join(' | ')}`);
+    if (!successful.length) throw new Error(`Every X source failed: ${failed.map((x) => `${x.account}: ${x.error}`).join(' | ')}`);
 
     const includeReplies = enabled('X_INCLUDE_REPLIES');
     const includeReposts = enabled('X_INCLUDE_REPOSTS');
@@ -252,22 +352,34 @@ export default async function handler(req, res) {
     const baselined = [];
     for (const { feed } of successful) {
       const old = previous?.accounts?.[feed.account];
-      const latestId = feed.posts.reduce((latest, post) => laterId(latest, post.id), old?.sinceId || null);
-      nextAccounts[feed.account] = { initialized: true, sinceId: latestId, source: feed.source };
-      if (!old?.initialized && !old?.sinceId) {
+      const currentKeys = feed.posts.map((post) => post.key);
+      const oldKeys = Array.isArray(old?.seen) ? old.seen : [];
+      const sourceChanged = old?.sourceType && old.sourceType !== feed.sourceType;
+      nextAccounts[feed.account] = {
+        initialized: true,
+        seen: [...new Set([...currentKeys, ...oldKeys])].slice(0, MAX_SEEN),
+        source: feed.source,
+        sourceType: feed.sourceType,
+      };
+      if (!old?.initialized || !Array.isArray(old.seen) || sourceChanged) {
         baselined.push(feed.account);
         continue;
       }
-      for (const post of feed.posts) {
-        if (old.sinceId && BigInt(post.id) <= BigInt(old.sinceId)) continue;
+      const seen = new Set(old.seen);
+      for (let index = 0; index < feed.posts.length; index++) {
+        const post = feed.posts[index];
+        if (seen.has(post.key)) continue;
         if ((!includeReplies && post.reply) || (!includeReposts && post.repost)) continue;
-        pending.push(post);
+        pending.push({ ...post, feedIndex: index });
       }
     }
     for (const account of accounts) {
       if (!nextAccounts[account] && previous?.accounts?.[account]) nextAccounts[account] = previous.accounts[account];
     }
-    pending.sort((a, b) => BigInt(a.id) < BigInt(b.id) ? -1 : BigInt(a.id) > BigInt(b.id) ? 1 : 0);
+    pending.sort((a, b) => {
+      if (a.id && b.id) return BigInt(a.id) < BigInt(b.id) ? -1 : BigInt(a.id) > BigInt(b.id) ? 1 : 0;
+      return b.feedIndex - a.feedIndex;
+    });
 
     if (!req.query?.dry) {
       for (const post of pending) await sendDiscord(post);
@@ -288,9 +400,9 @@ export default async function handler(req, res) {
       notified: pending.length,
       failed,
       sources: Object.fromEntries(successful.map(({ feed }) => [feed.account, feed.source])),
-      posts: req.query?.dry ? pending.map(({ id, username, text, url }) => ({ id, username, text, url })) : undefined,
+      posts: req.query?.dry ? pending.map(({ id, key, username, text, url }) => ({ id: id || key, username, text, url })) : undefined,
     });
   } catch (error) {
-    return res.status(502).json({ error: error.message || 'X RSS watcher failed' });
+    return res.status(502).json({ error: error.message || 'X watcher failed' });
   }
 }

@@ -106,10 +106,10 @@ sending or saving; the JSON response says which source was used (`"source":"robl
 ## X account alerts
 
 `/api/x-watch` checks selected X accounts for new posts and sends each one to the same Discord
-webhook. This free version reads public RSS feeds, using a currently working independent Nitter
-mirror first and the public [Teapawt](https://github.com/4cuck/teapawt) instances that explicitly
-allow scraping as fallbacks. It tries several automatically if one fails. No X developer account,
-bearer token, login cookie, or paid API credit is needed.
+webhook. This free version reads public profiles through the free
+[Jina Reader API](https://jina.ai/reader/), which works from Vercel's serverless network. Public
+Nitter/Teapawt RSS instances remain as a secondary fallback. No X developer account, bearer token,
+login cookie, or paid API credit is needed.
 
 Add these variables in Vercel → Project → Settings → Environment Variables, then redeploy:
 
@@ -129,22 +129,22 @@ The existing Redis variables are reused. If `X_DISCORD_WEBHOOK_URL` is omitted, 
 back to `DISCORD_WEBHOOK_URL` for compatibility. Up to 10 accounts can be watched. The account list
 stays on the server, and no X credentials are stored anywhere.
 
-1. Test Discord without fetching an RSS feed:
+1. Test Discord without fetching an X profile:
    `https://YOUR-SITE.vercel.app/api/x-watch?key=YOUR_SECRET&test=1`
 2. Run once to save the newest post as a baseline. This first run intentionally sends no old posts:
    `https://YOUR-SITE.vercel.app/api/x-watch?key=YOUR_SECRET`
 3. Create a cron-job.org job for that same URL. Every 10–15 minutes is a sensible interval for a
    free community service.
 
-After the baseline, Redis remembers the newest post separately for every account. Replies and
-reposts are ignored unless enabled; original posts and quote posts notify normally. `?dry=1`
-previews what would be sent without posting to Discord or advancing the saved ID. The endpoint
-also accepts the secret in an `Authorization: Bearer YOUR_SECRET` header if your scheduler supports
-headers.
+After the baseline, Redis remembers recent post IDs or stable content fingerprints separately for
+every account. Replies and reposts are ignored unless enabled; original posts and quote posts
+notify normally. `?dry=1` previews what would be sent without posting to Discord or advancing the
+saved state. The endpoint also accepts the secret in an `Authorization: Bearer YOUR_SECRET` header
+if your scheduler supports headers.
 
-This is genuinely free, but it is less reliable than the official X API: the community mirrors
-depend on X's unofficial internal interface and may temporarily stop working after an X change.
-Automatic failover handles individual instance outages, but it cannot fix a platform-wide break.
+This is genuinely free, but it is less reliable than the official X API. Reader and the community
+RSS fallbacks ultimately depend on X's public website or unofficial internal interface and may
+temporarily stop working after an X change.
 
 ## Tuning
 
