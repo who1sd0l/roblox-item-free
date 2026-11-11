@@ -26,7 +26,7 @@ import { fetchItems } from './_lib/rolimons.js';
 import { fetchStock } from './_lib/roblox.js';
 import { redis, STATE_KEY, META_KEY, ARCHIVE_KEY } from './_lib/redis.js';
 
-// v3 state: { ts, src, slot, board, items: { id: { r, m, q, s?, c?, w? } } }
+// v3 state: { ts, src, slot, board, known, announced, items: { id: { r, m, q, s?, c?, w? } } }
 //   r = copies left, m = last time it moved, q = copies left at the last few 15-min marks,
 //   s = last time a claim was actually observed (read by /api/claimable), c = already announced,
 //   w = [copiesLeftWhenWoken, wokeAt, quietSince] while a dormant item is being watched for a reopen
@@ -228,6 +228,7 @@ export default async function handler(req, res) {
     const items = [];
     const offSale = [];
     const unavailable = [];
+    const confirmedAvailable = new Set();
     for (const m of Object.values(meta.items)) {
       const s = stock.get(m.i);
       const r = s ? s.r : m.r;
@@ -237,7 +238,10 @@ export default async function handler(req, res) {
         offSale.push(item.n);
         unavailable.push({ item, reason: 'off-sale' });
       }
-      else items.push(item);
+      else {
+        items.push(item);
+        if (s) confirmedAvailable.add(item.i);
+      }
     }
 
     if (req.query.test) {
@@ -268,7 +272,9 @@ export default async function handler(req, res) {
       }
     }
     if (source === 'roblox') {
-      for (const item of items) delete archiveItems[item.i]; // restocked / put back on sale
+      // A missing item in Roblox's batch response falls back to Rolimon's stock above. Do not
+      // call that a restock: only a positive Roblox response can clear an archived item.
+      for (const id of confirmedAvailable) delete archiveItems[id];
     }
     for (const [id, item] of Object.entries(archiveItems)) {
       if (!item.endedAt || now - item.endedAt > ARCHIVE_TTL) delete archiveItems[id];
@@ -276,14 +282,22 @@ export default async function handler(req, res) {
     const archive = { ts: now, items: archiveItems };
 
     const slot = Math.floor(now / SLOT);
-    const next = { ts: now, src: source, slot, board: prev && prev.board, items: {} };
+    const known = { ...((prev && prev.known) || {}) };
+    const announced = { ...((prev && prev.announced) || {}) };
+    if (prev) {
+      for (const [id, item] of Object.entries(prev.items)) {
+        known[id] = 1;
+        if (item.c) announced[id] = 1;
+      }
+    }
+    const next = { ts: now, src: source, slot, board: prev && prev.board, known, announced, items: {} };
     const events = [];
     const rows = [];
     for (const item of items) {
       const p = prev && prev.items[item.i];
       const cur = { r: item.r, m: p ? p.m : now, q: p ? p.q : [item.r] };
       if (p && p.s) cur.s = p.s;
-      if (p && p.c) cur.c = 1;
+      if ((p && p.c) || announced[item.i]) cur.c = 1;
       const before = events.length;
       if (p && !compare) {
         // Different source than last run: carry the history over but don't read anything into
@@ -311,13 +325,17 @@ export default async function handler(req, res) {
         if (moved > 0 && !cur.c && events.length === before) {
           events.push({ kind: 'claimable', item, claimed: moved });
         }
-      } else if (prev && item.a >= prev.ts - 3600) {
+      } else if (prev && !known[item.i] && item.a >= prev.ts - 3600) {
         // Only brand-new additions; not old items that crossed MIN_TOTAL or came back into stock.
         events.push({ kind: 'new', item });
       }
       // Anything announced as claiming counts, so it never gets a separate "still claimable".
-      if (events.length > before && item.r < item.t) cur.c = 1;
+      if (events.length > before && item.r < item.t) {
+        cur.c = 1;
+        next.announced[item.i] = 1;
+      }
       if (!prev || prev.slot !== slot) cur.q = [...cur.q, item.r].slice(-SLOTS);
+      next.known[item.i] = 1;
       next.items[item.i] = cur;
       rows.push({ item, hour: Math.max(0, cur.q[0] - item.r) });
     }

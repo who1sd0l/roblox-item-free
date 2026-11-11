@@ -6,7 +6,10 @@ export default async function handler(req, res) {
   try {
     const raw = await redis(['GET', ARCHIVE_KEY]);
     const archive = raw ? JSON.parse(raw) : { ts: Math.floor(Date.now() / 1000), items: {} };
-    const items = Object.values(archive.items || {}).sort((a, b) => b.endedAt - a.endedAt);
+    const since = Math.floor(Date.now() / 1000) - 72 * 3600;
+    const items = Object.values(archive.items || {})
+      .filter((item) => item.endedAt >= since)
+      .sort((a, b) => b.endedAt - a.endedAt);
 
     res.setHeader('cache-control', 's-maxage=60, stale-while-revalidate=300');
     res.status(200).json({

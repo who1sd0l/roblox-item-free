@@ -10,7 +10,7 @@ export default async function handler(req, res) {
     if (!rawState || !rawMeta) throw new Error('The watcher has not run yet');
     const state = JSON.parse(rawState);
     const meta = JSON.parse(rawMeta);
-    const since = state.ts - WINDOW_HOURS * 3600;
+    const since = Math.floor(Date.now() / 1000) - WINDOW_HOURS * 3600;
 
     const items = [];
     for (const [id, s] of Object.entries(state.items)) {
