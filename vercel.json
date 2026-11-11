@@ -8,6 +8,10 @@
     "api/watch.js": {
       "maxDuration": 30,
       "memory": 1024
+    },
+    "api/x-watch.js": {
+      "maxDuration": 30,
+      "memory": 1024
     }
   }
 }

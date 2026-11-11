@@ -18,6 +18,7 @@ only ever talks to `/api/items` on your own domain.
 api/_lib/          shared Rolimon's scraper + Roblox stock reader (not endpoints)
 api/items.js       JSON feed for the board
 api/watch.js       Discord alerts for 500+ copy items (call every minute)
+api/x-watch.js     Discord alerts for new posts from configured X accounts
 api/claimable.js   items the watcher saw being claimed in the last 24h ("Still claimable" tab)
 api/ended.js       Roblox-confirmed sold-out / off-sale items from the last 72h
 public/index.html  the board (static, fetches /api/items on open)
@@ -101,6 +102,49 @@ The very first run posts "Watcher online" and records a baseline. Any run where 
 changed (Roblox ↔ Rolimon's fallback, or an upgrade) also only records, because the two sources
 disagree and the difference would look like claims. `?dry=1` shows what would be sent without
 sending or saving; the JSON response says which source was used (`"source":"roblox"`).
+
+## X account alerts
+
+`/api/x-watch` checks selected X accounts for new posts and sends each one to the same Discord
+webhook. This free version reads public RSS feeds, using a currently working independent Nitter
+mirror first and the public [Teapawt](https://github.com/4cuck/teapawt) instances that explicitly
+allow scraping as fallbacks. It tries several automatically if one fails. No X developer account,
+bearer token, login cookie, or paid API credit is needed.
+
+Add these variables in Vercel → Project → Settings → Environment Variables, then redeploy:
+
+- `X_ACCOUNTS`: comma-separated handles without passwords. For this project:
+  `UgcNoticias_,itznevn,Xh0PlUgc`
+- `X_DISCORD_WEBHOOK_URL`: webhook for the channel that should receive X post alerts. This is
+  separate from `DISCORD_WEBHOOK_URL`, which continues receiving Roblox item alerts.
+- `X_WATCH_SECRET` *(optional)*: a separate secret for this endpoint; otherwise `WATCH_SECRET`
+  is used
+- `X_DISCORD_MENTION` *(optional)*: e.g. `@everyone` or `<@&ROLE_ID>` on each X alert
+- `X_INCLUDE_REPLIES` *(optional)*: `true` to notify for replies; off by default
+- `X_INCLUDE_REPOSTS` *(optional)*: `true` to notify for reposts; off by default
+- `X_RSS_BASE_URLS` *(optional)*: comma-separated custom mirrors, intended for a self-hosted
+  instance or another instance whose operator gave permission
+
+The existing Redis variables are reused. If `X_DISCORD_WEBHOOK_URL` is omitted, the watcher falls
+back to `DISCORD_WEBHOOK_URL` for compatibility. Up to 10 accounts can be watched. The account list
+stays on the server, and no X credentials are stored anywhere.
+
+1. Test Discord without fetching an RSS feed:
+   `https://YOUR-SITE.vercel.app/api/x-watch?key=YOUR_SECRET&test=1`
+2. Run once to save the newest post as a baseline. This first run intentionally sends no old posts:
+   `https://YOUR-SITE.vercel.app/api/x-watch?key=YOUR_SECRET`
+3. Create a cron-job.org job for that same URL. Every 10–15 minutes is a sensible interval for a
+   free community service.
+
+After the baseline, Redis remembers the newest post separately for every account. Replies and
+reposts are ignored unless enabled; original posts and quote posts notify normally. `?dry=1`
+previews what would be sent without posting to Discord or advancing the saved ID. The endpoint
+also accepts the secret in an `Authorization: Bearer YOUR_SECRET` header if your scheduler supports
+headers.
+
+This is genuinely free, but it is less reliable than the official X API: the community mirrors
+depend on X's unofficial internal interface and may temporarily stop working after an X change.
+Automatic failover handles individual instance outages, but it cannot fix a platform-wide break.
 
 ## Tuning
 

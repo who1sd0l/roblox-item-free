@@ -4,6 +4,7 @@
 export const STATE_KEY = 'flb:watch:v3';
 export const META_KEY = 'flb:watch:meta';
 export const ARCHIVE_KEY = 'flb:watch:ended:v1';
+export const X_STATE_KEY = 'flb:x-watch:v2';
 
 const env = (k) => (process.env[k] || '').trim();
 
