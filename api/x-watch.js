@@ -360,6 +360,9 @@ export default async function handler(req, res) {
         seen: [...new Set([...currentKeys, ...oldKeys])].slice(0, MAX_SEEN),
         source: feed.source,
         sourceType: feed.sourceType,
+        posts: feed.posts.slice(0, 20).map(({ id, key, username, creator, name, text, createdAt, url, avatar, image, repost, reply }) => ({
+          id, key, username, creator, name, text, createdAt, url, avatar, image, repost, reply,
+        })),
       };
       if (!old?.initialized || !Array.isArray(old.seen) || sourceChanged) {
         baselined.push(feed.account);

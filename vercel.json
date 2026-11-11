@@ -2,16 +2,16 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "functions": {
     "api/items.js": {
-      "maxDuration": 30,
-      "memory": 1024
+      "maxDuration": 30
     },
     "api/watch.js": {
-      "maxDuration": 30,
-      "memory": 1024
+      "maxDuration": 30
     },
     "api/x-watch.js": {
-      "maxDuration": 30,
-      "memory": 1024
+      "maxDuration": 30
+    },
+    "api/x-feed.js": {
+      "maxDuration": 10
     }
   }
 }

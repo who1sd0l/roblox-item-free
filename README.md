@@ -19,6 +19,7 @@ api/_lib/          shared Rolimon's scraper + Roblox stock reader (not endpoints
 api/items.js       JSON feed for the board
 api/watch.js       Discord alerts for 500+ copy items (call every minute)
 api/x-watch.js     Discord alerts for new posts from configured X accounts
+api/x-feed.js      public snapshots captured by the X watcher for the website
 api/claimable.js   items the watcher saw being claimed in the last 24h ("Still claimable" tab)
 api/ended.js       Roblox-confirmed sold-out / off-sale items from the last 72h
 public/index.html  the board (static, fetches /api/items on open)
@@ -141,6 +142,10 @@ every account. Replies and reposts are ignored unless enabled; original posts an
 notify normally. `?dry=1` previews what would be sent without posting to Discord or advancing the
 saved state. The endpoint also accepts the secret in an `Authorization: Bearer YOUR_SECRET` header
 if your scheduler supports headers.
+
+The watcher also stores a small sanitized snapshot of each account's latest posts. `/api/x-feed`
+publishes that snapshot without secrets, and the site's **X updates** tab displays it. The tab starts
+filling after the first successful non-dry `/api/x-watch` run following deployment.
 
 This is genuinely free, but it is less reliable than the official X API. Reader and the community
 RSS fallbacks ultimately depend on X's public website or unofficial internal interface and may
