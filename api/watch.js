@@ -24,7 +24,7 @@
 
 import { fetchItems } from './_lib/rolimons.js';
 import { fetchStock } from './_lib/roblox.js';
-import { redis, STATE_KEY, META_KEY } from './_lib/redis.js';
+import { redis, STATE_KEY, META_KEY, ARCHIVE_KEY } from './_lib/redis.js';
 
 // v3 state: { ts, src, slot, board, items: { id: { r, m, q, s?, c?, w? } } }
 //   r = copies left, m = last time it moved, q = copies left at the last few 15-min marks,
@@ -38,6 +38,7 @@ const META_TTL = 300;
 const SLOT = 900;          // activity sample every 15 minutes...
 const SLOTS = 5;           // ...keeping five, so q[0] is roughly an hour old
 const REOPEN_WINDOW = 1800;
+const ARCHIVE_TTL = 72 * 3600;
 const MAX_CARDS = 4;       // more alerts of one kind than this in a run are sent as a single list
 const COLORS = { started: 0x22c55e, reopened: 0xf59e0b, claimable: 0x14b8a6, new: 0x7c5cff, board: 0x2b2d31 };
 const TITLES = {
@@ -201,7 +202,7 @@ export default async function handler(req, res) {
     const claimableUrl = site ? `${site}/#tab=claimable` : '';
     const yearStart = Math.floor(Date.UTC(new Date().getUTCFullYear(), 0, 1) / 1000);
 
-    const [rawState, rawMeta, rawLegacy] = await redis(['MGET', STATE_KEY, META_KEY, LEGACY_KEY]);
+    const [rawState, rawMeta, rawLegacy, rawArchive] = await redis(['MGET', STATE_KEY, META_KEY, LEGACY_KEY, ARCHIVE_KEY]);
 
     // Which items to track: Rolimon's list, refreshed every few minutes.
     let meta = rawMeta ? JSON.parse(rawMeta) : null;
@@ -226,12 +227,16 @@ export default async function handler(req, res) {
 
     const items = [];
     const offSale = [];
+    const unavailable = [];
     for (const m of Object.values(meta.items)) {
       const s = stock.get(m.i);
       const r = s ? s.r : m.r;
-      if (r <= 0) continue; // sold out
       const item = { ...m, r, t: Math.max(m.t, s ? s.t : 0, r) };
-      if (s && s.off) offSale.push(item.n);
+      if (r <= 0) unavailable.push({ item, reason: 'sold-out' });
+      else if (s && s.off) {
+        offSale.push(item.n);
+        unavailable.push({ item, reason: 'off-sale' });
+      }
       else items.push(item);
     }
 
@@ -250,6 +255,25 @@ export default async function handler(req, res) {
       prev = { ts: old.ts, src: 'rolimons-v2', items: Object.fromEntries(Object.entries(old.items).map(([id, [r]]) => [id, { r, m: now, q: [r] }])) };
     }
     const compare = prev && prev.src === source;
+
+    // Keep a short explanation trail for items that disappear. Only archive a transition that
+    // Roblox itself confirmed; Rolimon's fallback numbers cannot reliably prove an item ended.
+    const oldArchive = rawArchive ? JSON.parse(rawArchive) : { items: {} };
+    const archiveItems = { ...(oldArchive.items || {}) };
+    if (source === 'roblox' && prev) {
+      for (const { item, reason } of unavailable) {
+        if (prev.items[item.i] && !archiveItems[item.i]) {
+          archiveItems[item.i] = { ...item, endedAt: now, reason };
+        }
+      }
+    }
+    if (source === 'roblox') {
+      for (const item of items) delete archiveItems[item.i]; // restocked / put back on sale
+    }
+    for (const [id, item] of Object.entries(archiveItems)) {
+      if (!item.endedAt || now - item.endedAt > ARCHIVE_TTL) delete archiveItems[id];
+    }
+    const archive = { ts: now, items: archiveItems };
 
     const slot = Math.floor(now / SLOT);
     const next = { ts: now, src: source, slot, board: prev && prev.board, items: {} };
@@ -306,6 +330,7 @@ export default async function handler(req, res) {
       tracked: items.length,
       waiting,
       offSale: offSale.length,
+      recentlyEnded: Object.keys(archiveItems).length,
       firstRun: !prev,
       started: events.filter((e) => e.kind === 'started').map((e) => e.item.n),
       reopened: events.filter((e) => e.kind === 'reopened').map((e) => e.item.n),
@@ -337,7 +362,10 @@ export default async function handler(req, res) {
     }
 
     // Save only after Discord accepted the alerts, so a failed post is retried next run.
-    const writes = [redis(['SET', STATE_KEY, JSON.stringify(next)])];
+    const writes = [
+      redis(['SET', STATE_KEY, JSON.stringify(next)]),
+      redis(['SET', ARCHIVE_KEY, JSON.stringify(archive)]),
+    ];
     if (metaFresh) writes.push(redis(['SET', META_KEY, JSON.stringify(meta)]));
     await Promise.all(writes);
     return res.status(200).json(summary);

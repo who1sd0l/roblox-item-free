@@ -5,7 +5,8 @@ A live board of free Roblox UGC limiteds that still have copies left, scraped fr
 
 The board auto-checks every 5 minutes while open, badges items that dropped since your last
 visit, pops a toast (and a `(3)` tab-title count) when new items land, and keeps its filters
-in the URL hash so a filtered view can be shared or bookmarked.
+in the URL hash so a filtered view can be shared or bookmarked. Status tabs highlight items
+being claimed now, drops waiting to start, items almost gone, and items that recently ended.
 
 The Rolimon's page renders from a JSON blob embedded in its HTML (`var item_details = {...}`)
 and serves no CORS headers, so the scrape runs server-side in a Vercel function; the browser
@@ -18,6 +19,7 @@ api/_lib/          shared Rolimon's scraper + Roblox stock reader (not endpoints
 api/items.js       JSON feed for the board
 api/watch.js       Discord alerts for 500+ copy items (call every minute)
 api/claimable.js   items the watcher saw being claimed in the last 24h ("Still claimable" tab)
+api/ended.js       Roblox-confirmed sold-out / off-sale items from the last 72h
 public/index.html  the board (static, fetches /api/items on open)
 vercel.json        function memory / timeout
 ```
@@ -29,7 +31,7 @@ vercel.json        function memory / timeout
 output settings empty — Vercel serves `public/` statically and turns `api/items.js` into a
 function automatically. Deploy.
 
-**Option B - CLI.** Install [Node.js](https://nodejs.org) (this machine doesn't have it yet), then:
+**Option B - CLI.** Install [Node.js](https://nodejs.org), then:
 
 ```
 npm i -g vercel
@@ -63,6 +65,10 @@ More than 4 of one kind in the same check arrive as a single list.
 in the last 24 hours, sorted by claims in the last hour. It reads the watcher's saved data, so it
 only fills in once `/api/watch` is running. The alert links use the domain cron-job.org calls; set
 `SITE_URL` if you want them to point at a different domain.
+
+**Claiming now and Recently ended tabs**: the watcher also supplies the live hourly activity view
+and keeps Roblox-confirmed sold-out or off-sale items for 72 hours. An ended item is removed from
+the archive if Roblox puts it back on sale. These tabs therefore also require `/api/watch` to run.
 
 **Live board**: one message the watcher edits in place every minute, listing what's being claimed
 right now (claims in the last hour) and what's waiting to start. Edits don't notify, so pin it and
