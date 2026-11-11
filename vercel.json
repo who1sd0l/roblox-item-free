@@ -12,6 +12,9 @@
     },
     "api/x-feed.js": {
       "maxDuration": 10
+    },
+    "api/upcoming.js": {
+      "maxDuration": 10
     }
   }
 }

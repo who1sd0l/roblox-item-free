@@ -8,7 +8,9 @@
 // Query: ?test=1 sends a sample Discord message without fetching X;
 //        ?dry=1 reports new posts without sending or saving.
 
-import { redis, X_STATE_KEY } from './_lib/redis.js';
+import { redis, X_SCHEDULE_KEY, X_STATE_KEY } from './_lib/redis.js';
+import { fetchCatalogDetails } from './_lib/roblox.js';
+import { linksFromHtml, linksFromMarkdown, mergeSchedule, scheduleEvents, snowflakeDate } from './_lib/x-schedule.js';
 import { createHash } from 'node:crypto';
 
 // The first public RSS mirror accepts server-side Node requests. The Teapawt fallbacks explicitly
@@ -134,6 +136,7 @@ function parseFeed(xml, account) {
       url: `https://x.com/${encodeURIComponent(account)}/status/${id}`,
       avatar,
       image: imageMatch ? decodeXml(imageMatch[1]) : null,
+      links: linksFromHtml(decodeXml(`${title}\n${unwrap(description)}`)),
       repost,
       reply,
     });
@@ -174,6 +177,17 @@ function parseJina(data, account) {
     const status = chunk.match(statusPattern);
     const id = status?.[1] || null;
     let body = status ? chunk.slice(status.index + status[0].length) : chunk;
+    if (id) {
+      const timePattern = new RegExp(`\\[[^\\]]+\\]\\(https://x\\.com/${escapedAccount}/status/${id}\\)`, 'gi');
+      const timeLinks = [...chunk.matchAll(timePattern)];
+      const timeLink = timeLinks[timeLinks.length - 1];
+      if (timeLink) body = chunk.slice(timeLink.index + timeLink[0].length);
+      const tails = [
+        body.search(new RegExp(`\\[\\]\\(https://x\\.com/${escapedAccount}/status/${id}/(?:photo|video)/`, 'i')),
+        body.search(/\[[^\]]*\]\(https:\/\/x\.com\/compose\/post\?/i),
+      ].filter((index) => index >= 0);
+      if (tails.length) body = body.slice(0, Math.min(...tails));
+    }
     body = body.replace(profilePattern, '').replace(/^\s*Pinned\s*/i, '');
     const imageMatches = [...chunk.matchAll(/!\[[^\]]*\]\((https?:\/\/[^)\s]+)(?:\s+"[^"]*")?\)/gi)];
     const image = imageMatches.map((match) => match[1]).find((url) =>
@@ -192,12 +206,15 @@ function parseJina(data, account) {
       creator,
       name,
       text,
-      createdAt: null,
       url: id ? `https://x.com/${encodeURIComponent(account)}/status/${id}` : `https://x.com/${encodeURIComponent(account)}`,
       avatar,
       image,
+      links: linksFromMarkdown(chunk).filter((url) =>
+        !/^https:\/\/x\.com\/(?:compose\/|[^/]+\/status\/\d+(?:\/(?:photo|video)\/\d+)?$)/i.test(url)
+        && !/pbs\.twimg\.com\/(?:profile_images|media|ext_tw_video_thumb|amplify_video_thumb)\//i.test(url)),
       repost: creator.toLowerCase() !== account.toLowerCase(),
       reply: /Replying to|^R to @/i.test(chunk),
+      createdAt: snowflakeDate(id),
     });
   }
   if (!posts.length) throw new Error('Reader profile contained no parseable posts');
@@ -287,17 +304,11 @@ function embedFor(post) {
   };
 }
 
-async function sendDiscord(post) {
+async function postDiscord(payload) {
   const hook = env('X_DISCORD_WEBHOOK_URL') || env('DISCORD_WEBHOOK_URL');
   if (!hook) throw new Error('X_DISCORD_WEBHOOK_URL is not set');
   const url = new URL(hook);
   url.searchParams.set('wait', 'true');
-  const mention = env('X_DISCORD_MENTION');
-  const payload = {
-    content: mention || undefined,
-    embeds: [embedFor(post)],
-    allowed_mentions: mention ? { parse: ['everyone', 'roles', 'users'] } : { parse: [] },
-  };
 
   for (let attempt = 0; attempt < 3; attempt++) {
     const response = await fetch(url, {
@@ -314,6 +325,48 @@ async function sendDiscord(post) {
     throw new Error(`Discord returned ${response.status}: ${cut(await response.text(), 200)}`);
   }
   throw new Error('Discord kept rate-limiting the webhook');
+}
+
+async function sendDiscord(post) {
+  const mention = env('X_DISCORD_MENTION');
+  return postDiscord({
+    content: mention || undefined,
+    embeds: [embedFor(post)],
+    allowed_mentions: mention ? { parse: ['everyone', 'roles', 'users'] } : { parse: [] },
+  });
+}
+
+async function sendScheduleDiscord(event) {
+  const item = event.item;
+  const labels = {
+    soon: '⏰ Free UGC drop starting soon',
+    live: '🚀 Free UGC drop is live',
+    changed: '🕒 Free UGC release time changed',
+  };
+  const colors = { soon: 0xf59e0b, live: 0x22c55e, changed: 0x3b82f6 };
+  const when = item.scheduledAt ? `<t:${Math.floor(Date.parse(item.scheduledAt) / 1000)}:F> · <t:${Math.floor(Date.parse(item.scheduledAt) / 1000)}:R>` : 'Time not confirmed';
+  const lines = [
+    `**${cut(item.title, 180)}**`,
+    `**When:** ${when}`,
+    `**Method:** ${item.method || 'Unknown'}`,
+    item.currentStock !== null ? `**Stock:** ${item.currentStock.toLocaleString()}/${(item.totalStock || 0).toLocaleString()} left` : item.expectedStock ? `**Expected stock:** ${item.expectedStock.toLocaleString()}` : '',
+    item.gameUrls?.[0] ? `**[Join game](${item.gameUrls[0]})**` : '',
+    `**[Source post](${item.sourceUrl})**`,
+  ].filter(Boolean);
+  const mention = env('X_DISCORD_MENTION');
+  return postDiscord({
+    content: mention || undefined,
+    embeds: [{
+      title: labels[event.kind],
+      description: lines.join('\n'),
+      url: item.itemUrl || item.sourceUrl,
+      color: colors[event.kind],
+      image: item.image ? { url: item.image } : undefined,
+      footer: { text: `Tracked from @${item.username}` },
+      timestamp: item.scheduledAt || item.createdAt,
+    }],
+    allowed_mentions: mention ? { parse: ['everyone', 'roles', 'users'] } : { parse: [] },
+  });
 }
 
 export default async function handler(req, res) {
@@ -335,8 +388,9 @@ export default async function handler(req, res) {
 
     const accounts = accountsFromEnv();
     const bases = rssBases();
-    const rawState = await redis(['GET', X_STATE_KEY]);
+    const [rawState, rawSchedule] = await redis(['MGET', X_STATE_KEY, X_SCHEDULE_KEY]);
     const previous = rawState ? JSON.parse(rawState) : null;
+    const previousSchedule = rawSchedule ? JSON.parse(rawSchedule) : null;
     const results = await Promise.all(accounts.map(async (account) => {
       try { return { ok: true, feed: await fetchAccount(account, bases) }; }
       catch (error) { return { ok: false, account, error: error.message }; }
@@ -360,8 +414,8 @@ export default async function handler(req, res) {
         seen: [...new Set([...currentKeys, ...oldKeys])].slice(0, MAX_SEEN),
         source: feed.source,
         sourceType: feed.sourceType,
-        posts: feed.posts.slice(0, 20).map(({ id, key, username, creator, name, text, createdAt, url, avatar, image, repost, reply }) => ({
-          id, key, username, creator, name, text, createdAt, url, avatar, image, repost, reply,
+        posts: feed.posts.slice(0, 20).map(({ id, key, username, creator, name, text, createdAt, url, avatar, image, links, repost, reply }) => ({
+          id, key, username, creator, name, text, createdAt, url, avatar, image, links, repost, reply,
         })),
       };
       if (!old?.initialized || !Array.isArray(old.seen) || sourceChanged) {
@@ -379,6 +433,21 @@ export default async function handler(req, res) {
     for (const account of accounts) {
       if (!nextAccounts[account] && previous?.accounts?.[account]) nextAccounts[account] = previous.accounts[account];
     }
+
+    const schedulePosts = successful.flatMap(({ feed }) => feed.posts.filter((post) => !post.reply || includeReplies));
+    let nextSchedule = mergeSchedule(previousSchedule, schedulePosts, new Map());
+    const catalogIds = [...new Set(nextSchedule.items.map((item) => item.itemId).filter(Boolean))];
+    let catalog = new Map();
+    let catalogFailed = false;
+    if (catalogIds.length) {
+      try { catalog = await fetchCatalogDetails(catalogIds); }
+      catch (error) {
+        catalogFailed = true;
+        failed.push({ account: 'Roblox verification', error: error.message });
+      }
+    }
+    nextSchedule = mergeSchedule(previousSchedule, schedulePosts, catalog, Date.now(), catalogFailed);
+    const scheduleAlerts = scheduleEvents(previousSchedule, nextSchedule);
     pending.sort((a, b) => {
       if (a.id && b.id) return BigInt(a.id) < BigInt(b.id) ? -1 : BigInt(a.id) > BigInt(b.id) ? 1 : 0;
       return b.feedIndex - a.feedIndex;
@@ -386,11 +455,19 @@ export default async function handler(req, res) {
 
     if (!req.query?.dry) {
       for (const post of pending) await sendDiscord(post);
-      await redis(['SET', X_STATE_KEY, JSON.stringify({
-        initialized: true,
-        accounts: nextAccounts,
-        ts: Math.floor(Date.now() / 1000),
-      })]);
+      for (const event of scheduleAlerts) {
+        await sendScheduleDiscord(event);
+        const saved = nextSchedule.items.find((item) => item.id === event.item.id);
+        if (saved) saved.reminders = { ...(saved.reminders || {}), [event.kind]: new Date().toISOString() };
+      }
+      await Promise.all([
+        redis(['SET', X_STATE_KEY, JSON.stringify({
+          initialized: true,
+          accounts: nextAccounts,
+          ts: Math.floor(Date.now() / 1000),
+        })]),
+        redis(['SET', X_SCHEDULE_KEY, JSON.stringify(nextSchedule)]),
+      ]);
     }
 
     return res.status(200).json({
@@ -401,6 +478,8 @@ export default async function handler(req, res) {
       baselined,
       fetched: successful.reduce((total, result) => total + result.feed.posts.length, 0),
       notified: pending.length,
+      upcoming: nextSchedule.items.length,
+      scheduleAlerts: scheduleAlerts.map(({ kind, item }) => ({ kind, id: item.id, title: item.title, scheduledAt: item.scheduledAt })),
       failed,
       sources: Object.fromEntries(successful.map(({ feed }) => [feed.account, feed.source])),
       posts: req.query?.dry ? pending.map(({ id, key, username, text, url }) => ({ id: id || key, username, text, url })) : undefined,

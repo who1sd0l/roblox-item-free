@@ -6,7 +6,8 @@ A live board of free Roblox UGC limiteds that still have copies left, scraped fr
 The board auto-checks every 5 minutes while open, badges items that dropped since your last
 visit, pops a toast (and a `(3)` tab-title count) when new items land, and keeps its filters
 in the URL hash so a filtered view can be shared or bookmarked. Status tabs highlight items
-being claimed now, drops waiting to start, items almost gone, and items that recently ended.
+being claimed now, announced upcoming drops, drops waiting to start, items almost gone, and items
+that recently ended.
 
 The Rolimon's page renders from a JSON blob embedded in its HTML (`var item_details = {...}`)
 and serves no CORS headers, so the scrape runs server-side in a Vercel function; the browser
@@ -20,10 +21,11 @@ api/items.js       JSON feed for the board
 api/watch.js       Discord alerts for 500+ copy items (call every minute)
 api/x-watch.js     Discord alerts for new posts from configured X accounts
 api/x-feed.js      public snapshots captured by the X watcher for the website
+api/upcoming.js    structured upcoming drops inferred from trusted X posts
 api/claimable.js   items the watcher saw being claimed in the last 24h ("Still claimable" tab)
 api/ended.js       Roblox-confirmed sold-out / off-sale items from the last 72h
 public/index.html  the board (static, fetches /api/items on open)
-vercel.json        function memory / timeout
+vercel.json        function timeouts
 ```
 
 ## Deploy to Vercel
@@ -134,8 +136,8 @@ stays on the server, and no X credentials are stored anywhere.
    `https://YOUR-SITE.vercel.app/api/x-watch?key=YOUR_SECRET&test=1`
 2. Run once to save the newest post as a baseline. This first run intentionally sends no old posts:
    `https://YOUR-SITE.vercel.app/api/x-watch?key=YOUR_SECRET`
-3. Create a cron-job.org job for that same URL. Every 10–15 minutes is a sensible interval for a
-   free community service.
+3. Create a cron-job.org job for that same URL. Every 10 minutes is a sensible interval for a
+   free community service and reliably catches the 20-minute reminder window.
 
 After the baseline, Redis remembers recent post IDs or stable content fingerprints separately for
 every account. Replies and reposts are ignored unless enabled; original posts and quote posts
@@ -146,6 +148,28 @@ if your scheduler supports headers.
 The watcher also stores a small sanitized snapshot of each account's latest posts. `/api/x-feed`
 publishes that snapshot without secrets, and the site's **X updates** tab displays it. The tab starts
 filling after the first successful non-dry `/api/x-watch` run following deployment.
+
+### Upcoming-drop tracking
+
+The same X scan now extracts structured free-UGC announcements when a trusted post contains a
+Roblox item or game link. It records the source, expanded links, release time, announced timezone,
+method, expected stock, public code, region, and requirements. X snowflake IDs supply the exact post
+time, so phrases such as `tomorrow at 5PM EST` can be converted without a paid X API.
+
+When an item ID is present, the watcher checks Roblox's public catalog endpoint and labels the entry
+as Roblox verified, live, ended, delayed, or still upcoming. Explicitly paid/Robux drops are excluded
+from this free-item board. `/api/upcoming` exposes only the sanitized schedule, and the site's
+**Upcoming** tab adds countdowns, source links, method/status filters, stock, codes, and game links.
+
+On each normal `/api/x-watch` run, the X webhook can also receive:
+
+- **Starting soon** when a confirmed time is within 20 minutes
+- **Drop is live** when Roblox stock becomes available after an earlier announcement
+- **Time changed** when a newer trusted post changes the schedule for the same item
+
+These reminders use `X_DISCORD_WEBHOOK_URL` and `X_DISCORD_MENTION`. They require the watcher cron;
+the website itself does not need to remain open. Ten-minute checks are recommended if you want the
+20-minute reminder reliably. Test and dry-run calls never advance reminder state.
 
 This is genuinely free, but it is less reliable than the official X API. Reader and the community
 RSS fallbacks ultimately depend on X's public website or unofficial internal interface and may

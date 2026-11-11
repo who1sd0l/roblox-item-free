@@ -36,6 +36,7 @@ export default async function handler(req, res) {
           url: post.url || `https://x.com/${encodeURIComponent(username)}`,
           avatar: post.avatar || null,
           image: post.image || null,
+          links: Array.isArray(post.links) ? post.links.slice(0, 12) : [],
           repost: Boolean(post.repost),
           reply: Boolean(post.reply),
         });

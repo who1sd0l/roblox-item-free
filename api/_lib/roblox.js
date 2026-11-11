@@ -6,9 +6,8 @@ const BATCH = 120; // Roblox rejects more than 120 items per request with "Inval
 
 const sleep = (ms) => new Promise((ok) => setTimeout(ok, ms));
 
-// Map of assetId -> { r: copiesLeft, t: totalCopies, off: isOffSale }. Items Roblox doesn't
-// return are simply missing from the map.
-export async function fetchStock(ids) {
+// Map of assetId -> normalized public catalog details. Items Roblox doesn't return are missing.
+export async function fetchCatalogDetails(ids) {
   const out = new Map();
   let token = '';
   for (let i = 0; i < ids.length; i += BATCH) {
@@ -32,14 +31,21 @@ export async function fetchStock(ids) {
       data = (await r.json()).data || [];
     }
     if (!data) throw new Error('Roblox kept refusing the request (rate limited)');
-    for (const d of data) {
-      if (typeof d.unitsAvailableForConsumption !== 'number') continue;
-      out.set(String(d.id), {
-        r: d.unitsAvailableForConsumption,
-        t: d.totalQuantity || 0,
-        off: d.priceStatus === 'Off Sale',
-      });
-    }
+    for (const d of data) out.set(String(d.id), {
+      n: d.name || '',
+      r: typeof d.unitsAvailableForConsumption === 'number' ? d.unitsAvailableForConsumption : null,
+      t: typeof d.totalQuantity === 'number' ? d.totalQuantity : 0,
+      off: d.priceStatus === 'Off Sale',
+      // lowestPrice is often a reseller's price for an originally free limited, so it must not
+      // be used to decide whether the announced drop itself costs Robux.
+      price: typeof d.price === 'number' ? d.price : null,
+    });
   }
   return out;
+}
+
+// Stock watcher compatibility: only return collectible items with a numeric remaining count.
+export async function fetchStock(ids) {
+  const details = await fetchCatalogDetails(ids);
+  return new Map([...details].filter(([, item]) => typeof item.r === 'number'));
 }
