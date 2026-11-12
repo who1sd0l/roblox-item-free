@@ -766,12 +766,13 @@
     if (drop.status === 'ended') return 'Drop ended';
     if (drop.status === 'cancelled') return 'Cancelled';
     if (!drop.scheduledAt) return 'Release time not confirmed';
-    var diff = Date.parse(drop.scheduledAt) - Date.now(), past = diff < 0, seconds = Math.abs(Math.round(diff / 1000));
-    var days = Math.floor(seconds / 86400), hours = Math.floor(seconds % 86400 / 3600), minutes = Math.floor(seconds % 3600 / 60);
+    var diff = Date.parse(drop.scheduledAt) - Date.now(), past = diff < 0, seconds = Math.floor(Math.abs(diff) / 1000);
+    var days = Math.floor(seconds / 86400), hours = Math.floor(seconds % 86400 / 3600), minutes = Math.floor(seconds % 3600 / 60), secs = seconds % 60;
     var pieces = [];
     if (days) pieces.push(days + 'd');
     if (hours || days) pieces.push(hours + 'h');
-    pieces.push(minutes + 'm');
+    if (minutes || hours || days) pieces.push(minutes + 'm');
+    pieces.push(secs + 's');
     return past ? pieces.join(' ') + ' late' : 'Starts in ' + pieces.join(' ');
   }
 
@@ -780,7 +781,9 @@
       ? nf(drop.currentStock) + (drop.totalStock ? ' / ' + nf(drop.totalStock) + ' left' : ' left')
       : drop.expectedStock ? nf(drop.expectedStock) + ' expected stock' : '';
     var date = drop.scheduledAt
-      ? new Date(drop.scheduledAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }) + (drop.timezone ? ' · announced in ' + drop.timezone : '')
+      ? 'Your time: ' + new Date(drop.scheduledAt).toLocaleString('en-US', {
+          year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short'
+        }) + (drop.timezone ? ' · source timezone: ' + drop.timezone : '')
       : 'The source did not confirm a release time.';
     var image = drop.image
       ? '<img class="drop-img" src="' + esc(drop.image) + '" alt="" loading="lazy" decoding="async">'
@@ -796,7 +799,7 @@
     ].filter(Boolean).join('');
     return '<article class="drop">' +
       '<div class="drop-main">' + image + '<div class="drop-info"><div class="drop-top"><span class="drop-status ' + esc(drop.status) + '">' + esc(dropStatusLabel(drop.status)) + '</span></div>' +
-        '<h3>' + esc(drop.title) + '</h3><div class="drop-when" data-countdown="' + esc(drop.id) + '">' + esc(countdownText(drop)) + '</div><div class="drop-date">' + esc(date) + '</div></div></div>' +
+        '<h3>' + esc(drop.title) + '</h3><div class="drop-when" data-countdown="' + esc(drop.id) + '" aria-live="off">' + esc(countdownText(drop)) + '</div><div class="drop-date">' + esc(date) + '</div></div></div>' +
       '<p class="drop-text">' + esc(drop.text || 'No additional instructions were included.') + '</p>' +
       '<div class="drop-meta">' + meta + '</div>' +
       '<div class="drop-actions">' +
