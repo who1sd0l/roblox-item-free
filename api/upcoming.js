@@ -1,7 +1,7 @@
 // Public, read-only schedule inferred from trusted X posts and verified against Roblox when possible.
 
 import { redis, X_SCHEDULE_KEY } from './_lib/redis.js';
-import { isUpcomingVisible } from './_lib/x-schedule.js';
+import { isUpcomingVisible, mergeSchedule } from './_lib/x-schedule.js';
 
 const publicItem = (item) => ({
   id: item.id,
@@ -45,7 +45,10 @@ export default async function handler(req, res) {
     if (!raw) return res.status(200).json({ ready: false, items: [], counts: {}, updatedAt: null });
     const schedule = JSON.parse(raw);
     const now = Date.now();
-    const items = (schedule.items || []).filter((item) => isUpcomingVisible(item, now)).slice(0, 100).map(publicItem);
+    // Normalize on read as well as during the watcher run so legacy duplicate records disappear
+    // immediately after a deployment instead of waiting for the next scheduled scan.
+    const normalized = mergeSchedule(schedule, [], new Map(), now, true);
+    const items = normalized.items.filter((item) => isUpcomingVisible(item, now)).slice(0, 100).map(publicItem);
     const counts = items.reduce((out, item) => {
       out[item.status] = (out[item.status] || 0) + 1;
       return out;

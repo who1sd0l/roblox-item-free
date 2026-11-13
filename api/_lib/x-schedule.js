@@ -49,9 +49,18 @@ function mergeSources(...groups) {
   return [...sources.values()].sort((a, b) => Date.parse(b.createdAt || 0) - Date.parse(a.createdAt || 0));
 }
 
+function gameIdFor(entry) {
+  return (entry.gameUrls || []).map((url) => url.match(/roblox\.com\/games\/(\d+)/i)?.[1]).find(Boolean) || null;
+}
+
+function eventKey(entry) {
+  const gameId = gameIdFor(entry);
+  return gameId && entry.scheduledAt ? `${gameId}|${entry.scheduledAt}` : null;
+}
+
 function canonicalId(entry) {
   if (entry.itemId) return `item:${entry.itemId}`;
-  const gameId = (entry.gameUrls || []).map((url) => url.match(/roblox\.com\/games\/(\d+)/i)?.[1]).find(Boolean);
+  const gameId = gameIdFor(entry);
   if (gameId && entry.scheduledAt) return `event:${gameId}:${entry.scheduledAt}`;
   const normalized = String(entry.text || '')
     .toLowerCase()
@@ -60,6 +69,37 @@ function canonicalId(entry) {
     .replace(/\s+/g, ' ')
     .trim();
   return `event:${digest(`${entry.scheduledAt || ''}|${gameId || ''}|${normalized}`)}`;
+}
+
+function combineRelatedEntries(entries) {
+  const itemsByEvent = new Map();
+  for (const entry of entries.values()) {
+    if (!entry.itemId) continue;
+    const key = eventKey(entry);
+    if (!key) continue;
+    if (!itemsByEvent.has(key)) itemsByEvent.set(key, []);
+    itemsByEvent.get(key).push(entry);
+  }
+
+  for (const [id, event] of entries) {
+    if (event.itemId) continue;
+    const candidates = itemsByEvent.get(eventKey(event)) || [];
+    let target = candidates.length === 1 ? candidates[0] : null;
+    if (!target && candidates.length > 1) {
+      const text = String(event.text || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ');
+      const matches = candidates.filter((candidate) => {
+        const title = String(candidate.title || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+        return title.length >= 4 && text.includes(title);
+      });
+      if (matches.length === 1) target = matches[0];
+    }
+    if (!target) continue;
+    target.sources = mergeSources(target.sources || [], event.sources || [], [sourceFor(event)]);
+    target.links = unique([...(target.links || []), ...(event.links || [])]);
+    target.gameUrls = unique([...(target.gameUrls || []), ...(event.gameUrls || [])]);
+    target.reminders = { ...(event.reminders || {}), ...(target.reminders || {}) };
+    entries.delete(id);
+  }
 }
 
 export function snowflakeDate(id) {
@@ -284,6 +324,7 @@ export function mergeSchedule(previous, posts, catalog = new Map(), now = Date.n
       old.sources = mergeSources(old.sources || [], item.sources || [], [sourceFor(item)]);
     }
   }
+  combineRelatedEntries(entries);
   const items = [...entries.values()].map((entry) => {
     let detail = entry.itemId ? catalog.get(String(entry.itemId)) : null;
     if (!detail && preserveCatalog && entry.verified) detail = {
@@ -304,7 +345,9 @@ export function mergeSchedule(previous, posts, catalog = new Map(), now = Date.n
       offSale: detail?.off ?? null,
       price: detail?.price ?? null,
       status,
-      liveSince: status === 'live' ? (entry.status === 'live' && entry.liveSince ? entry.liveSince : detectedLiveAt) : null,
+      liveSince: status === 'live'
+        ? (entry.status === 'live' && (entry.liveSince || entry.checkedAt) ? entry.liveSince || entry.checkedAt : detectedLiveAt)
+        : null,
       checkedAt,
     };
   }).filter((entry) => !entry.isPaid);

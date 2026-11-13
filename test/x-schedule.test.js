@@ -90,6 +90,27 @@ test('combines duplicate event posts into one card with multiple sources', () =>
   assert.deepEqual(result.items[0].sources.map((source) => source.username).sort(), ['itznevn', 'xh0plugc']);
 });
 
+test('folds a game-only announcement into its matching verified item card', () => {
+  const common = {
+    createdAt: '2026-11-12T03:00:00.000Z', image: null,
+    links: ['https://www.roblox.com/games/126259681759948/Gabbys-Dollhouse'],
+  };
+  const result = mergeSchedule(null, [
+    {
+      ...common, key: 'item', username: 'itznevn', url: 'https://x.com/itznevn/status/1',
+      text: 'Doozie Dog Ears free UGC restocks Friday at 10:30AM EST.',
+      links: [...common.links, 'https://www.roblox.com/catalog/137813364366385/Doozie-Dog-Ears'],
+    },
+    {
+      ...common, key: 'event', username: 'xh0plugc', url: 'https://x.com/xh0plugc/status/2',
+      text: 'Gabby has posted an event. Obtain this free UGC Friday at 10:30AM EST.',
+    },
+  ], new Map([['137813364366385', { n: 'Doozie Dog Ears', r: 0, t: 5000, off: false, price: 0 }]]), Date.parse('2026-11-12T04:00:00.000Z'));
+  assert.equal(result.items.length, 1);
+  assert.equal(result.items[0].itemId, '137813364366385');
+  assert.deepEqual(result.items[0].sources.map((source) => source.username).sort(), ['itznevn', 'xh0plugc']);
+});
+
 test('upcoming board removes claimed, finished, and ten-minute-old live items', () => {
   const now = Date.parse('2026-11-13T12:00:00.000Z');
   assert.equal(isUpcomingVisible({ status: 'upcoming' }, now), true);
