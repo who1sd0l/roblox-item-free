@@ -56,7 +56,7 @@ test('recognizes join-claim and Spanish stock formats', () => {
   assert.equal(spanish.expectedStock, 3500);
 });
 
-test('verifies live stock and creates one transition alert', () => {
+test('future catalog stock stays upcoming until its announced release time', () => {
   const post = {
     id: '2120363414086123856', key: 'id:2120363414086123856', username: 'itznevn',
     url: 'https://x.com/itznevn/status/2120363414086123856', text: 'Free UGC dropping tmr at 5PM EST.',
@@ -64,10 +64,15 @@ test('verifies live stock and creates one transition alert', () => {
     links: ['https://www.roblox.com/catalog/123'],
   };
   const before = mergeSchedule(null, [post], new Map(), Date.parse('2026-11-11T20:00:00Z'));
-  const live = mergeSchedule(before, [post], new Map([['123', { n: 'Test item', r: 50, t: 100, off: false, price: 0 }]]), Date.parse('2026-11-11T20:05:00Z'));
+  const catalog = new Map([['123', { n: 'Test item', r: 50, t: 100, off: false, price: 0 }]]);
+  const staged = mergeSchedule(before, [post], catalog, Date.parse('2026-11-11T20:05:00Z'));
+  assert.equal(staged.items[0].status, 'upcoming');
+  assert.equal(staged.items[0].title, 'Test item');
+  assert.deepEqual(scheduleEvents(before, staged, Date.parse('2026-11-11T20:05:00Z')), []);
+
+  const live = mergeSchedule(staged, [post], catalog, Date.parse('2026-11-11T22:01:00Z'));
   assert.equal(live.items[0].status, 'live');
-  assert.equal(live.items[0].title, 'Test item');
-  assert.deepEqual(scheduleEvents(before, live, Date.parse('2026-11-11T20:05:00Z')).map((event) => event.kind), ['live']);
+  assert.deepEqual(scheduleEvents(staged, live, Date.parse('2026-11-11T22:01:00Z')).map((event) => event.kind), ['live']);
 });
 
 test('excludes drops that Roblox confirms are paid', () => {

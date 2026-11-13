@@ -188,9 +188,11 @@ export function extractScheduleEntries(post) {
 
 function statusFor(entry, detail, now) {
   if (entry.isCancelled) return 'cancelled';
-  if (detail && detail.r > 0 && !detail.off) return 'live';
   const scheduled = entry.scheduledAt ? Date.parse(entry.scheduledAt) : NaN;
+  // Roblox publishes an item's stock before many events actually open. A trusted future release
+  // time therefore takes priority over catalog inventory; stock alone is not proof it is claimable.
   if (Number.isFinite(scheduled) && scheduled > now) return 'upcoming';
+  if (detail && detail.r > 0 && !detail.off) return 'live';
   if (detail && detail.t > 0 && detail.r === 0) return 'ended';
   if (Number.isFinite(scheduled) && scheduled <= now - 30 * 60000) return 'delayed';
   return 'announced';
