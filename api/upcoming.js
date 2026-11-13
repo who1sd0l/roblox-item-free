@@ -1,6 +1,7 @@
 // Public, read-only schedule inferred from trusted X posts and verified against Roblox when possible.
 
 import { redis, X_SCHEDULE_KEY } from './_lib/redis.js';
+import { isUpcomingVisible } from './_lib/x-schedule.js';
 
 const publicItem = (item) => ({
   id: item.id,
@@ -8,6 +9,10 @@ const publicItem = (item) => ({
   title: item.title || 'Free UGC announcement',
   username: item.username,
   sourceUrl: item.sourceUrl,
+  sources: (Array.isArray(item.sources) ? item.sources : [{ username: item.username, sourceUrl: item.sourceUrl }])
+    .filter((source) => source?.username && source?.sourceUrl)
+    .slice(0, 8)
+    .map((source) => ({ username: source.username, sourceUrl: source.sourceUrl })),
   createdAt: item.createdAt,
   scheduledAt: item.scheduledAt || null,
   timezone: item.timezone || null,
@@ -39,7 +44,8 @@ export default async function handler(req, res) {
     res.setHeader('cache-control', 'public, s-maxage=60, stale-while-revalidate=300');
     if (!raw) return res.status(200).json({ ready: false, items: [], counts: {}, updatedAt: null });
     const schedule = JSON.parse(raw);
-    const items = (schedule.items || []).filter((item) => !item.isPaid).slice(0, 100).map(publicItem);
+    const now = Date.now();
+    const items = (schedule.items || []).filter((item) => isUpcomingVisible(item, now)).slice(0, 100).map(publicItem);
     const counts = items.reduce((out, item) => {
       out[item.status] = (out[item.status] || 0) + 1;
       return out;

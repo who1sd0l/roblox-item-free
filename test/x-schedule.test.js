@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   extractScheduleEntries,
+  isUpcomingVisible,
   linksFromMarkdown,
   mergeSchedule,
   parseScheduledTime,
@@ -72,7 +73,32 @@ test('future catalog stock stays upcoming until its announced release time', () 
 
   const live = mergeSchedule(staged, [post], catalog, Date.parse('2026-11-11T22:01:00Z'));
   assert.equal(live.items[0].status, 'live');
+  assert.equal(live.items[0].liveSince, '2026-11-11T22:00:00.000Z');
   assert.deepEqual(scheduleEvents(staged, live, Date.parse('2026-11-11T22:01:00Z')).map((event) => event.kind), ['live']);
+});
+
+test('combines duplicate event posts into one card with multiple sources', () => {
+  const common = {
+    createdAt: '2026-11-12T03:00:00.000Z', image: null,
+    links: ['https://www.roblox.com/games/126259681759948/Gabbys-Dollhouse'],
+  };
+  const result = mergeSchedule(null, [
+    { ...common, key: 'one', username: 'itznevn', url: 'https://x.com/itznevn/status/1', text: 'Free UGC will be available Friday at 10:30AM EST.' },
+    { ...common, key: 'two', username: 'xh0plugc', url: 'https://x.com/xh0plugc/status/2', text: 'Free UGC dropping Friday at 10:30AM EST.' },
+  ], new Map(), Date.parse('2026-11-12T04:00:00.000Z'));
+  assert.equal(result.items.length, 1);
+  assert.deepEqual(result.items[0].sources.map((source) => source.username).sort(), ['itznevn', 'xh0plugc']);
+});
+
+test('upcoming board removes claimed, finished, and ten-minute-old live items', () => {
+  const now = Date.parse('2026-11-13T12:00:00.000Z');
+  assert.equal(isUpcomingVisible({ status: 'upcoming' }, now), true);
+  assert.equal(isUpcomingVisible({ status: 'ended' }, now), false);
+  assert.equal(isUpcomingVisible({ status: 'cancelled' }, now), false);
+  assert.equal(isUpcomingVisible({ status: 'live', currentStock: null, totalStock: 100, liveSince: '2026-11-13T11:51:00.000Z' }, now), true);
+  assert.equal(isUpcomingVisible({ status: 'live', currentStock: 99, totalStock: 100, liveSince: '2026-11-13T11:59:00.000Z' }, now), false);
+  assert.equal(isUpcomingVisible({ status: 'live', currentStock: 100, totalStock: 100, liveSince: '2026-11-13T11:51:00.000Z' }, now), true);
+  assert.equal(isUpcomingVisible({ status: 'live', currentStock: 100, totalStock: 100, liveSince: '2026-11-13T11:50:00.000Z' }, now), false);
 });
 
 test('excludes drops that Roblox confirms are paid', () => {

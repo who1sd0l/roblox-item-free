@@ -246,7 +246,8 @@
   .drop-actions a{font-size:12.5px;font-weight:600;color:var(--ink-2);text-decoration:none}
   .drop-actions a:hover{color:var(--accent)}
   .drop-actions .primary{color:var(--accent)}
-  .drop-source{margin-left:auto;color:var(--ink-3)!important}
+  .drop-sources{display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap;margin-left:auto}
+  .drop-source{color:var(--ink-3)!important}
 
   /* ---------- states ---------- */
   .sk{background:linear-gradient(90deg,var(--panel-2) 0%,var(--panel-3) 50%,var(--panel-2) 100%);background-size:200% 100%;animation:sh 1.3s linear infinite;border-radius:8px}
@@ -788,9 +789,15 @@
     var image = drop.image
       ? '<img class="drop-img" src="' + esc(drop.image) + '" alt="" loading="lazy" decoding="async">'
       : '<span class="drop-img xavatar-fallback" aria-hidden="true">?</span>';
+    var sources = drop.sources && drop.sources.length ? drop.sources : [{ username: drop.username, sourceUrl: drop.sourceUrl }];
+    var sourceLinks = sources.slice(0, 4).map(function (source) {
+      return '<a class="drop-source" href="' + esc(source.sourceUrl) + '" target="_blank" rel="noopener">@' + esc(source.username) + '&nbsp;&rarr;</a>';
+    }).join('');
+    if (sources.length > 4) sourceLinks += '<span class="drop-source">+' + nf(sources.length - 4) + '</span>';
     var meta = [
       '<span class="b">' + esc(drop.method || 'Unknown') + '</span>',
       drop.verified ? '<span class="b claimed">Roblox verified</span>' : '<span class="b">Source only</span>',
+      sources.length > 1 ? '<span class="b">' + nf(sources.length) + ' X sources</span>' : '',
       drop.isRestock ? '<span class="b">Restock</span>' : '',
       drop.region ? '<span class="b">' + esc(drop.region) + ' region</span>' : '',
       stock ? '<span class="b">' + esc(stock) + '</span>' : '',
@@ -805,7 +812,7 @@
       '<div class="drop-actions">' +
         (drop.itemUrl ? '<a class="primary" href="' + esc(drop.itemUrl) + '" target="_blank" rel="noopener">View item</a>' : '') +
         (drop.gameUrls && drop.gameUrls[0] ? '<a href="' + esc(drop.gameUrls[0]) + '" target="_blank" rel="noopener">Join game</a>' : '') +
-        '<a class="drop-source" href="' + esc(drop.sourceUrl) + '" target="_blank" rel="noopener">@' + esc(drop.username) + ' source&nbsp;&rarr;</a>' +
+        '<span class="drop-sources">' + sourceLinks + '</span>' +
       '</div></article>';
   }
 

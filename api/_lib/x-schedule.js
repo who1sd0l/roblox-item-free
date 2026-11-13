@@ -1,6 +1,8 @@
 // Turn trusted public X posts into structured upcoming-drop records.
 // This is intentionally conservative: a post needs UGC/drop language plus a Roblox item or game link.
 
+import { createHash } from 'node:crypto';
+
 const X_EPOCH = 1288834974657n;
 const DAY = 86400000;
 const KEEP_MS = 21 * DAY;
@@ -15,6 +17,50 @@ const WEEKDAYS = { sunday: 0, monday: 1, tuesday: 2, wednesday: 3, thursday: 4, 
 
 const unique = (values) => [...new Set(values.filter(Boolean))];
 const cleanUrl = (value) => String(value || '').replace(/&amp;/g, '&').replace(/[),.;]+$/, '');
+const digest = (value) => createHash('sha256').update(String(value)).digest('hex').slice(0, 20);
+
+function sourceFor(entry) {
+  if (!entry?.username || !entry?.sourceUrl) return null;
+  return {
+    username: entry.username,
+    sourceUrl: entry.sourceUrl,
+    postId: entry.postId || null,
+    createdAt: entry.createdAt || null,
+  };
+}
+
+function mergeSources(...groups) {
+  const sources = new Map();
+  for (const source of groups.flat().filter(Boolean)) {
+    if (!source.username || !source.sourceUrl) continue;
+    const key = source.username.toLowerCase();
+    const old = sources.get(key);
+    const direct = /\/status\/\d+/i.test(source.sourceUrl);
+    const oldDirect = /\/status\/\d+/i.test(old?.sourceUrl || '');
+    if (!old || (direct && !oldDirect) || (direct === oldDirect && Date.parse(source.createdAt || 0) > Date.parse(old.createdAt || 0))) {
+      sources.set(key, {
+        username: source.username,
+        sourceUrl: source.sourceUrl,
+        postId: source.postId || null,
+        createdAt: source.createdAt || null,
+      });
+    }
+  }
+  return [...sources.values()].sort((a, b) => Date.parse(b.createdAt || 0) - Date.parse(a.createdAt || 0));
+}
+
+function canonicalId(entry) {
+  if (entry.itemId) return `item:${entry.itemId}`;
+  const gameId = (entry.gameUrls || []).map((url) => url.match(/roblox\.com\/games\/(\d+)/i)?.[1]).find(Boolean);
+  if (gameId && entry.scheduledAt) return `event:${gameId}:${entry.scheduledAt}`;
+  const normalized = String(entry.text || '')
+    .toLowerCase()
+    .replace(/https?:\/\/\S+/g, '')
+    .replace(/[^a-z0-9áéíóúñ]+/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return `event:${digest(`${entry.scheduledAt || ''}|${gameId || ''}|${normalized}`)}`;
+}
 
 export function snowflakeDate(id) {
   if (!/^\d{15,20}$/.test(String(id || ''))) return null;
@@ -177,13 +223,15 @@ export function extractScheduleEntries(post) {
     limitPerUser, code, region, isPaid, isCancelled, isRestock: /\brestock/i.test(text),
   };
   const ids = itemIds.length ? itemIds : [null];
-  return ids.map((itemId) => ({
-    ...common,
-    id: itemId ? `item:${itemId}` : `post:${post.username}:${post.key}`,
-    itemId,
-    itemUrl: itemId ? links.find((url) => new RegExp(`roblox\\.com/catalog/${itemId}(?:/|$)`, 'i').test(url)) : null,
-    title: titleFromText(text, post.username),
-  }));
+  return ids.map((itemId) => {
+    const item = {
+      ...common,
+      itemId,
+      itemUrl: itemId ? links.find((url) => new RegExp(`roblox\\.com/catalog/${itemId}(?:/|$)`, 'i').test(url)) : null,
+      title: titleFromText(text, post.username),
+    };
+    return { ...item, id: canonicalId(item), sources: mergeSources([sourceFor(item)]) };
+  });
 }
 
 function statusFor(entry, detail, now) {
@@ -203,16 +251,37 @@ export function mergeSchedule(previous, posts, catalog = new Map(), now = Date.n
   for (const old of previous?.items || []) {
     const created = Date.parse(old.createdAt || 0);
     const scheduled = Date.parse(old.scheduledAt || 0);
-    if (created >= now - KEEP_MS || scheduled >= now - 2 * DAY) entries.set(old.id, old);
+    if (created < now - KEEP_MS && scheduled < now - 2 * DAY) continue;
+    const migrated = { ...old, id: canonicalId(old), sources: mergeSources(old.sources || [], [sourceFor(old)]) };
+    const existing = entries.get(migrated.id);
+    if (!existing || Date.parse(migrated.createdAt || 0) >= Date.parse(existing.createdAt || 0)) {
+      entries.set(migrated.id, {
+        ...existing,
+        ...migrated,
+        reminders: { ...(existing?.reminders || {}), ...(migrated.reminders || {}) },
+        sources: mergeSources(existing?.sources || [], migrated.sources || []),
+      });
+    } else {
+      existing.sources = mergeSources(existing.sources || [], migrated.sources || []);
+      existing.reminders = { ...(migrated.reminders || {}), ...(existing.reminders || {}) };
+    }
   }
   const extracted = posts.flatMap(extractScheduleEntries).sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt));
   for (const item of extracted) {
+    item.id = canonicalId(item);
     const old = entries.get(item.id);
     if (!old || Date.parse(item.createdAt) >= Date.parse(old.createdAt || 0)) {
       const reminders = { ...(old?.reminders || {}) };
       // A moved release needs a fresh starting-soon alert for its new time.
       if (old?.scheduledAt && item.scheduledAt && old.scheduledAt !== item.scheduledAt) delete reminders.soon;
-      entries.set(item.id, { ...old, ...item, reminders });
+      entries.set(item.id, {
+        ...old,
+        ...item,
+        reminders,
+        sources: mergeSources(old?.sources || [], item.sources || [], [sourceFor(item)]),
+      });
+    } else {
+      old.sources = mergeSources(old.sources || [], item.sources || [], [sourceFor(item)]);
     }
   }
   const items = [...entries.values()].map((entry) => {
@@ -221,6 +290,10 @@ export function mergeSchedule(previous, posts, catalog = new Map(), now = Date.n
       n: entry.title, r: entry.currentStock, t: entry.totalStock, off: entry.offSale, price: entry.price,
     };
     const isPaid = Boolean(entry.isPaid || (detail && detail.price > 0));
+    const status = statusFor(entry, detail, now);
+    const checkedAt = new Date(now).toISOString();
+    const scheduled = Date.parse(entry.scheduledAt || '');
+    const detectedLiveAt = Number.isFinite(scheduled) && scheduled <= now ? new Date(scheduled).toISOString() : checkedAt;
     return {
       ...entry,
       isPaid,
@@ -230,8 +303,9 @@ export function mergeSchedule(previous, posts, catalog = new Map(), now = Date.n
       totalStock: detail?.t ?? entry.expectedStock ?? null,
       offSale: detail?.off ?? null,
       price: detail?.price ?? null,
-      status: statusFor(entry, detail, now),
-      checkedAt: new Date(now).toISOString(),
+      status,
+      liveSince: status === 'live' ? (entry.status === 'live' && entry.liveSince ? entry.liveSince : detectedLiveAt) : null,
+      checkedAt,
     };
   }).filter((entry) => !entry.isPaid);
   items.sort((a, b) => {
@@ -242,14 +316,24 @@ export function mergeSchedule(previous, posts, catalog = new Map(), now = Date.n
   return { items, updatedAt: new Date(now).toISOString() };
 }
 
+export function isUpcomingVisible(item, now = Date.now()) {
+  if (item.isPaid || ['ended', 'cancelled'].includes(item.status)) return false;
+  if (item.status !== 'live') return true;
+  const current = item.currentStock;
+  const total = item.totalStock;
+  if (typeof current === 'number' && typeof total === 'number' && total > 0 && current < total) return false;
+  const liveSince = Date.parse(item.liveSince || '');
+  return !Number.isFinite(liveSince) || now - liveSince < 10 * 60000;
+}
+
 export function scheduleEvents(previous, next, now = Date.now()) {
-  const oldById = new Map((previous?.items || []).map((item) => [item.id, item]));
+  const oldById = new Map((previous?.items || []).map((item) => [canonicalId(item), item]));
   const events = [];
   for (const item of next.items) {
     const old = oldById.get(item.id);
     const scheduled = item.scheduledAt ? Date.parse(item.scheduledAt) : NaN;
     const soon = Number.isFinite(scheduled) && scheduled >= now - 2 * 60000 && scheduled <= now + 20 * 60000;
-    if (soon && ['upcoming', 'announced'].includes(item.status) && !old?.reminders?.soon) events.push({ kind: 'soon', item });
+    if (soon && ['upcoming', 'announced'].includes(item.status) && !old?.reminders?.soon && !item.reminders?.soon) events.push({ kind: 'soon', item });
     if (old && item.status === 'live' && old.status !== 'live') events.push({ kind: 'live', item });
     if (old?.scheduledAt && item.scheduledAt && old.scheduledAt !== item.scheduledAt) events.push({ kind: 'changed', item });
   }

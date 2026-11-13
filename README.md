@@ -160,6 +160,9 @@ When an item ID is present, the watcher checks Roblox's public catalog endpoint 
 as Roblox verified, live, ended, delayed, or still upcoming. Explicitly paid/Robux drops are excluded
 from this free-item board. `/api/upcoming` exposes only the sanitized schedule, and the site's
 **Upcoming** tab adds countdowns, source links, method/status filters, stock, codes, and game links.
+Repeated posts for the same item—or the same game and release time—are combined into one card with
+all source accounts attached. Finished items disappear immediately; a live item leaves Upcoming once
+claims begin or ten minutes after it first becomes live.
 
 On each normal `/api/x-watch` run, the X webhook can also receive:
 
