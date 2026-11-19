@@ -32,12 +32,21 @@ test('personal tracking and cross-feed pulse controls are present', () => {
 test('navigation uses the organized responsive sidebar shell', () => {
   assert.match(html, /<aside class="sidebar"/);
   assert.match(html, /class="main-shell"/);
-  assert.match(html, /grid-template-areas:"main sidebar"/);
-  assert.match(html, /grid-template-columns:minmax\(0,1fr\) 224px/);
+  assert.match(html, /grid-template-areas:"sidebar main"/);
+  assert.match(html, /grid-template-columns:228px minmax\(0,1fr\)/);
   assert.match(html, /\.sidebar\{grid-area:sidebar/);
   assert.match(html, /class="nav-label" role="presentation">Live tracking/);
   assert.match(html, /id="view-title"/);
   assert.match(html, /@media \(max-width:1000px\)/);
+});
+
+test('dashboard redesign keeps real tracker actions and restrained visual system', () => {
+  assert.match(html, /<span class="brand-copy">UGC Radar/);
+  assert.match(html, /class="hero-kicker">Free Roblox UGC · live tracking/);
+  assert.match(html, /data-hero-tab="all"/);
+  assert.match(html, /data-hero-tab="upcoming"/);
+  assert.match(html, /--accent:#b9f34a/);
+  assert.match(html, /<span class="b free">Free<\/span>/);
 });
 
 test('claim activity uses one deduplicated view with stock sorting', () => {
