@@ -50,6 +50,13 @@ test('dashboard redesign keeps real tracker actions and blue-white visual system
   assert.match(html, /<span class="b free">Free<\/span>/);
 });
 
+test('filter toolbar uses one full-width aligned control group', () => {
+  assert.match(html, /\.crow\{[^}]*width:100%;margin:0/);
+  assert.match(html, /\.controls #view\{margin-left:4px\}/);
+  assert.match(html, /\.crow \+ \.crow\{[^}]*border-top:1px solid var\(--line\)/);
+  assert.doesNotMatch(html, /\.controls #view\{margin-left:auto\}/);
+});
+
 test('claim activity uses one deduplicated view with stock sorting', () => {
   assert.match(html, /data-v="claimable"[^>]*>Claimable now/);
   assert.doesNotMatch(html, /data-v="active"/);
