@@ -14,6 +14,10 @@ the page is open it reports when a saved item starts claiming, becomes scarce, o
 or server-side personal data is involved. The share control copies or opens the device share sheet
 for the current tab, search, and filters without including the Saved list.
 
+On desktop, views are organized in a persistent sidebar under Browse, Live tracking, and
+Sources & history. On smaller screens the same navigation becomes a sticky horizontal strip;
+arrow keys move between views when the navigation has keyboard focus.
+
 The Rolimon's page renders from a JSON blob embedded in its HTML (`var item_details = {...}`)
 and serves no CORS headers, so the scrape runs server-side in a Vercel function; the browser
 only ever talks to `/api/items` on your own domain.
