@@ -6,7 +6,7 @@
 <title>UGC Radar — Free Roblox Item Tracker</title>
 <meta name="description" content="Track free Roblox UGC items with stock left, upcoming drops, and live game events.">
 <meta name="theme-color" content="#080d16">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='4' y='4' width='24' height='24' rx='6' fill='%23b9f34a'/%3E%3Crect x='12' y='12' width='8' height='8' rx='2' fill='%23080d16'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='4' y='4' width='24' height='24' rx='6' fill='%234f8cff'/%3E%3Crect x='12' y='12' width='8' height='8' rx='2' fill='white'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://tr.rbxcdn.com" crossorigin>
 <script>
   // Apply the saved theme before first paint so there is no flash.
@@ -14,25 +14,25 @@
 </script>
 <style>
   :root{
-    --bg:#080d16; --panel:#0f1623; --panel-2:#151e2e; --panel-3:#1c2739;
-    --ink:#f4f7fb; --ink-2:#b4bdca; --ink-3:#7b879a;
-    --line:#273247; --line-2:#3c4960;
-    --accent:#b9f34a; --accent-ink:#0b1105; --accent-soft:#1d2c16;
-    --new:#b9f34a; --new-bg:#1d2c16; --new-ink:#0b1105;
-    --ok:#9be33f; --warn:#efb84e; --crit:#ff7373;
+    --bg:#08111f; --panel:#0e192a; --panel-2:#142238; --panel-3:#1b2d47;
+    --ink:#f8fbff; --ink-2:#b9c7da; --ink-3:#7e90a8;
+    --line:#263a55; --line-2:#3a5578;
+    --accent:#4f8cff; --accent-ink:#ffffff; --accent-soft:#142b4d;
+    --new:#5aa0ff; --new-bg:#132b4e; --new-ink:#ffffff;
+    --ok:#55a7f2; --warn:#efb84e; --crit:#ff7373;
     --shadow:0 12px 34px rgba(0,0,0,.18);
-    --bar-bg:rgba(8,13,22,.94);
+    --bar-bg:rgba(8,17,31,.94);
     color-scheme:dark;
   }
   :root[data-theme="light"]{
-    --bg:#f3f5f0; --panel:#ffffff; --panel-2:#eef1ea; --panel-3:#e3e7df;
-    --ink:#151a20; --ink-2:#515b68; --ink-3:#7b8490;
-    --line:#d9ded4; --line-2:#bcc5b8;
-    --accent:#6f9f12; --accent-ink:#ffffff; --accent-soft:#edf6da;
-    --new:#5d8d0b; --new-bg:#edf6da; --new-ink:#ffffff;
-    --ok:#568b19; --warn:#9b650c; --crit:#c44343;
-    --shadow:0 12px 34px rgba(24,31,20,.08);
-    --bar-bg:rgba(243,245,240,.94);
+    --bg:#f4f7fb; --panel:#ffffff; --panel-2:#edf3fa; --panel-3:#dfeaf6;
+    --ink:#111827; --ink-2:#4b5f78; --ink-3:#71839a;
+    --line:#d4e0ed; --line-2:#b7c9dc;
+    --accent:#2563eb; --accent-ink:#ffffff; --accent-soft:#e8f0ff;
+    --new:#2563eb; --new-bg:#e8f0ff; --new-ink:#ffffff;
+    --ok:#2678c9; --warn:#9b650c; --crit:#c44343;
+    --shadow:0 12px 34px rgba(29,58,95,.09);
+    --bar-bg:rgba(244,247,251,.94);
     color-scheme:light;
   }
 
@@ -72,7 +72,7 @@
   .side-copy{margin:auto 2px 0;padding-top:13px;border-top:1px solid var(--line);color:var(--ink-3);font-size:12px;line-height:1.45}
 
   /* ---------- hero ---------- */
-  .hero{position:relative;isolation:isolate;min-height:260px;display:flex;align-items:center;padding:38px 40px;overflow:hidden;background:linear-gradient(120deg,var(--panel) 0%,color-mix(in srgb,var(--panel) 88%,#291e4a) 68%,color-mix(in srgb,var(--accent) 14%,var(--panel)) 100%);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}
+  .hero{position:relative;isolation:isolate;min-height:260px;display:flex;align-items:center;padding:38px 40px;overflow:hidden;background:linear-gradient(120deg,var(--panel) 0%,color-mix(in srgb,var(--panel) 88%,#153259) 68%,color-mix(in srgb,var(--accent) 14%,var(--panel)) 100%);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}
   .hero::after{content:"";position:absolute;z-index:-1;width:360px;height:360px;right:-120px;top:-170px;border-radius:50%;background:color-mix(in srgb,var(--accent) 12%,transparent);filter:blur(6px)}
   .hero-copy{max-width:760px}
   .hero-kicker{display:inline-flex;align-items:center;gap:8px;margin-bottom:13px;color:var(--ink-2);font-size:12px;font-weight:800;letter-spacing:.16em;text-transform:uppercase}

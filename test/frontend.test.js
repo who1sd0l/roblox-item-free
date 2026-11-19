@@ -40,12 +40,13 @@ test('navigation uses the organized responsive sidebar shell', () => {
   assert.match(html, /@media \(max-width:1000px\)/);
 });
 
-test('dashboard redesign keeps real tracker actions and restrained visual system', () => {
+test('dashboard redesign keeps real tracker actions and blue-white visual system', () => {
   assert.match(html, /<span class="brand-copy">UGC Radar/);
   assert.match(html, /class="hero-kicker">Free Roblox UGC · live tracking/);
   assert.match(html, /data-hero-tab="all"/);
   assert.match(html, /data-hero-tab="upcoming"/);
-  assert.match(html, /--accent:#b9f34a/);
+  assert.match(html, /--accent:#4f8cff/);
+  assert.match(html, /--ink:#f8fbff/);
   assert.match(html, /<span class="b free">Free<\/span>/);
 });
 
