@@ -64,12 +64,12 @@
   button{font:inherit;color:inherit}
   [hidden]{display:none!important}
   :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
-  .wrap{max-width:1480px;margin:0 auto;display:grid;grid-template-columns:220px minmax(0,1fr);gap:28px;align-items:start}
-  .main-shell{min-width:0}
+  .wrap{max-width:1800px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 224px;grid-template-areas:"main sidebar";gap:24px;align-items:start}
+  .main-shell{grid-area:main;min-width:0}
   .mono{font-family:ui-monospace,"SFMono-Regular",Consolas,monospace;font-variant-numeric:tabular-nums}
 
   /* ---------- sidebar ---------- */
-  .sidebar{position:sticky;top:16px;height:calc(100vh - 32px);display:flex;flex-direction:column;padding:14px;background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .sidebar{grid-area:sidebar;position:sticky;top:16px;height:calc(100vh - 32px);display:flex;flex-direction:column;padding:14px;background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
   .top{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding-bottom:13px;border-bottom:1px solid var(--line)}
   .brand{display:flex;align-items:center;gap:9px;width:100%;font-weight:700;font-size:16px;letter-spacing:-.015em}
   .brand-copy{display:flex;flex-direction:column;line-height:1.15}
@@ -163,7 +163,7 @@
   .tabs button{position:relative;display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;border:0;background:none;cursor:pointer;font-size:14px;font-weight:600;color:var(--ink-3);padding:8px 9px;border-radius:6px;white-space:nowrap;flex:none;text-align:left}
   .tabs button:hover{color:var(--ink);background:var(--panel-2)}
   .tabs button[aria-selected="true"]{color:var(--ink);background:var(--accent-soft)}
-  .tabs button[aria-selected="true"]::after{content:"";position:absolute;left:0;top:7px;bottom:7px;width:2px;border-radius:2px;background:var(--accent)}
+  .tabs button[aria-selected="true"]::after{content:"";position:absolute;right:0;top:7px;bottom:7px;width:2px;border-radius:2px;background:var(--accent)}
   .tabs .tc{font-family:ui-monospace,"SFMono-Regular",Consolas,monospace;font-size:10.5px;font-weight:500;color:var(--ink-2);background:var(--panel-2);border:1px solid var(--line);border-radius:5px;padding:0 5px;line-height:17px}
   .tabs .tc:empty{display:none}
   .tabs button[data-v="saved"] .tc{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 35%,var(--line))}

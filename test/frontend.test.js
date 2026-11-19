@@ -32,6 +32,9 @@ test('personal tracking and cross-feed pulse controls are present', () => {
 test('navigation uses the organized responsive sidebar shell', () => {
   assert.match(html, /<aside class="sidebar"/);
   assert.match(html, /class="main-shell"/);
+  assert.match(html, /grid-template-areas:"main sidebar"/);
+  assert.match(html, /grid-template-columns:minmax\(0,1fr\) 224px/);
+  assert.match(html, /\.sidebar\{grid-area:sidebar/);
   assert.match(html, /class="nav-label" role="presentation">Live tracking/);
   assert.match(html, /id="view-title"/);
   assert.match(html, /@media \(max-width:1000px\)/);
