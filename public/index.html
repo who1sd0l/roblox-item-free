@@ -56,7 +56,7 @@
     margin:0; color:var(--ink);
     background:var(--bg);
     font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-    font-size:15px; line-height:1.5; min-height:100vh;
+    font-size:16px; line-height:1.5; min-height:100vh;
     padding-inline:16px;
     padding-block:calc(22px + env(safe-area-inset-top,0px)) calc(56px + env(safe-area-inset-bottom,0px));
   }
@@ -69,7 +69,7 @@
 
   /* ---------- top bar ---------- */
   .top{display:flex;align-items:center;gap:12px;padding-bottom:14px;border-bottom:1px solid var(--line)}
-  .brand{display:flex;align-items:center;gap:9px;font-weight:650;font-size:14px;letter-spacing:-.01em}
+  .brand{display:flex;align-items:center;gap:9px;font-weight:650;font-size:15px;letter-spacing:-.01em}
   .logo{width:24px;height:24px;flex:none;color:var(--accent)}
   .live{display:inline-flex;align-items:center;gap:7px;margin-left:auto;font-family:ui-monospace,"SFMono-Regular",Consolas,monospace;font-size:11px;color:var(--ink-2);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:5px 8px;white-space:nowrap}
   .dot{width:8px;height:8px;border-radius:50%;background:var(--ink-3);flex:none}
@@ -85,18 +85,29 @@
     font-weight:700; font-size:clamp(30px,5vw,44px); line-height:1.08; letter-spacing:-.03em; margin:0; text-wrap:balance;
   }
   h1 em{font-style:normal;color:var(--accent)}
-  .lede{color:var(--ink-2);max-width:64ch;margin:12px 0 0;font-size:15px}
+  .lede{color:var(--ink-2);max-width:64ch;margin:12px 0 0;font-size:16px}
   .lede b{color:var(--ink);font-weight:600}
 
   .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;margin-top:24px;background:var(--line);border:1px solid var(--line);border-radius:8px;overflow:hidden}
   .stat{position:relative;background:var(--panel);border:0;border-radius:0;padding:12px 14px;box-shadow:none;overflow:hidden}
   .stat .n{font-weight:650;font-size:22px;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.15}
-  .stat .l{font-size:11px;color:var(--ink-3);margin-top:2px}
+  .stat .l{font-size:13px;color:var(--ink-3);margin-top:2px}
   .stat.hl{border:0}
   .stat.hl .n{color:var(--new)}
   button.stat{text-align:left;cursor:pointer;font:inherit;color:inherit;width:100%}
   button.stat:hover{background:var(--panel-2)}
   button.stat[aria-pressed="true"]{background:var(--new-bg);box-shadow:inset 0 -2px 0 var(--new)}
+
+  /* ---------- live pulse ---------- */
+  .pulse{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));margin-top:12px;border:1px solid var(--line);border-radius:8px;background:var(--panel);overflow:hidden}
+  .pulse-head{grid-column:1/-1;display:flex;align-items:baseline;justify-content:space-between;gap:16px;padding:8px 12px;border-bottom:1px solid var(--line);color:var(--ink-3);font-size:13px}
+  .pulse-head b{color:var(--ink-2);font-size:14px;font-weight:650}
+  .pulse-item{min-width:0;text-align:left;border:0;border-right:1px solid var(--line);background:var(--panel);padding:10px 12px;cursor:pointer}
+  .pulse-item:last-child{border-right:0}
+  .pulse-item:hover{background:var(--panel-2)}
+  .pulse-kind{display:block;color:var(--ink-3);font-size:13px}
+  .pulse-name{display:block;margin-top:2px;font-size:14px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pulse-meta{display:block;margin-top:1px;color:var(--ink-2);font-family:ui-monospace,"SFMono-Regular",Consolas,monospace;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
   /* ---------- controls ---------- */
   .controls{
@@ -110,27 +121,27 @@
   .crow + .crow{margin-top:8px}
   .search{position:relative;flex:1 1 240px;min-width:0}
   .search svg{position:absolute;left:11px;top:50%;width:16px;height:16px;transform:translateY(-50%);color:var(--ink-3);pointer-events:none}
-  .search input{width:100%;font:inherit;font-size:14px;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:8px 38px 8px 34px;outline:none}
+  .search input{width:100%;font:inherit;font-size:15px;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:8px 38px 8px 34px;outline:none}
   .search input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
   .search input::-webkit-search-cancel-button{display:none}
   .kbd{position:absolute;right:9px;top:50%;transform:translateY(-50%);font-family:ui-monospace,"SFMono-Regular",Consolas,monospace;font-size:11px;color:var(--ink-3);border:1px solid var(--line-2);border-radius:4px;padding:0 6px;line-height:18px;pointer-events:none}
   .search input:focus + .kbd,.search input:not(:placeholder-shown) + .kbd{display:none}
   .seg{display:flex;background:var(--panel-2);border:1px solid var(--line);border-radius:6px;padding:2px;gap:1px}
-  .seg button{font-size:13px;font-weight:500;border:0;background:transparent;color:var(--ink-2);padding:6px 10px;border-radius:4px;cursor:pointer;white-space:nowrap}
+  .seg button{font-size:14px;font-weight:500;border:0;background:transparent;color:var(--ink-2);padding:6px 10px;border-radius:4px;cursor:pointer;white-space:nowrap}
   .seg button:hover{color:var(--ink)}
   .seg button[aria-pressed="true"]{background:var(--panel);color:var(--ink);box-shadow:var(--shadow)}
   .seg.icons button{padding:6px 8px;display:grid;place-items:center}
   .seg.icons svg{width:16px;height:16px}
   .sel{position:relative}
-  .sel select{appearance:none;-webkit-appearance:none;font:inherit;font-size:13px;font-weight:500;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:8px 30px 8px 10px;cursor:pointer}
+  .sel select{appearance:none;-webkit-appearance:none;font:inherit;font-size:14px;font-weight:500;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:8px 30px 8px 10px;cursor:pointer}
   .sel::after{content:"";position:absolute;right:12px;top:50%;width:6px;height:6px;border-right:1.5px solid var(--ink-3);border-bottom:1.5px solid var(--ink-3);transform:translateY(-70%) rotate(45deg);pointer-events:none}
-  .lbl{font-size:12px;color:var(--ink-3);margin-right:-2px}
-  .chip{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:500;background:var(--accent-soft);color:var(--ink);border:1px solid color-mix(in srgb,var(--accent) 25%,var(--line));border-radius:6px;padding:4px 6px 4px 9px;max-width:100%}
+  .lbl{font-size:13px;color:var(--ink-3);margin-right:-2px}
+  .chip{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;font-weight:500;background:var(--accent-soft);color:var(--ink);border:1px solid color-mix(in srgb,var(--accent) 25%,var(--line));border-radius:6px;padding:4px 6px 4px 9px;max-width:100%}
   .chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .chip button{border:0;background:transparent;color:var(--ink-2);cursor:pointer;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;flex:none}
   .chip button:hover{background:var(--panel);color:var(--ink)}
   .count{font-family:ui-monospace,"SFMono-Regular",Consolas,monospace;font-size:12px;color:var(--ink-3);margin-left:auto;white-space:nowrap}
-  .refresh{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;cursor:pointer;background:var(--panel);color:var(--ink-2);border:1px solid var(--line);border-radius:6px;padding:8px 11px}
+  .refresh{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:600;cursor:pointer;background:var(--panel);color:var(--ink-2);border:1px solid var(--line);border-radius:6px;padding:8px 11px}
   .refresh svg{width:15px;height:15px}
   .refresh:hover{color:var(--ink);border-color:var(--line-2)}
   .refresh[disabled]{cursor:default}
@@ -140,14 +151,15 @@
   /* ---------- tabs ---------- */
   .tabs{display:flex;gap:2px;max-width:1180px;margin:0 auto 9px;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
   .tabs::-webkit-scrollbar{display:none}
-  .tabs button{position:relative;display:inline-flex;align-items:center;gap:7px;border:0;background:none;cursor:pointer;font-size:13px;font-weight:600;color:var(--ink-3);padding:8px 10px 10px;white-space:nowrap;flex:none}
+  .tabs button{position:relative;display:inline-flex;align-items:center;gap:7px;border:0;background:none;cursor:pointer;font-size:14px;font-weight:600;color:var(--ink-3);padding:8px 10px 10px;white-space:nowrap;flex:none}
   .tabs button:hover{color:var(--ink)}
   .tabs button[aria-selected="true"]{color:var(--ink)}
   .tabs button[aria-selected="true"]::after{content:"";position:absolute;left:8px;right:8px;bottom:-1px;height:2px;border-radius:2px;background:var(--accent)}
   .tabs .tc{font-family:ui-monospace,"SFMono-Regular",Consolas,monospace;font-size:10.5px;font-weight:500;color:var(--ink-2);background:var(--panel-2);border:1px solid var(--line);border-radius:5px;padding:0 5px;line-height:17px}
   .tabs .tc:empty{display:none}
+  .tabs button[data-v="saved"] .tc{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 35%,var(--line))}
   .tabs button[data-v="claimable"] .tc{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 35%,var(--line))}
-  .note{max-width:1180px;margin:0 auto 8px;font-size:12.5px;color:var(--ink-3)}
+  .note{max-width:1180px;margin:0 auto 8px;font-size:14px;color:var(--ink-3)}
   .note b{color:var(--ink-2);font-weight:600}
   .b.claimed{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 40%,transparent)}
   .b.ended{color:var(--crit);border-color:color-mix(in srgb,var(--crit) 40%,transparent)}
@@ -167,15 +179,15 @@
   .age{position:absolute;right:10px;top:10px}
   .age.fresh{color:var(--new);border-color:color-mix(in srgb,var(--new) 40%,transparent)}
   .body{display:flex;flex-direction:column;gap:6px;padding:12px 14px 14px;flex:1}
-  .name{margin:0;font-size:14.5px;font-weight:600;line-height:1.3;letter-spacing:-.005em;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+  .name{margin:0;font-size:15px;font-weight:600;line-height:1.3;letter-spacing:-.005em;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
   .name a{color:var(--ink);text-decoration:none}
   .name a:hover{color:var(--accent)}
-  .game{font-size:12.5px;color:var(--ink-3);display:flex;gap:6px;align-items:baseline;min-width:0}
+  .game{font-size:13.5px;color:var(--ink-3);display:flex;gap:6px;align-items:baseline;min-width:0}
   .gamebtn{border:0;background:none;padding:0;cursor:pointer;color:var(--ink-2);text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;border-bottom:1px dotted var(--line-2)}
   .gamebtn:hover{color:var(--accent);border-bottom-color:var(--accent)}
   .plus{flex:none;font-family:ui-monospace,"SFMono-Regular",Consolas,monospace;font-size:11px}
   .stock{margin-top:auto;padding-top:6px}
-  .nums{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:12px;color:var(--ink-3)}
+  .nums{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:13px;color:var(--ink-3)}
   .nums b{font-family:ui-monospace,"SFMono-Regular",Consolas,monospace;font-size:13px;color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
   .nums .pct{font-family:ui-monospace,"SFMono-Regular",Consolas,monospace;font-variant-numeric:tabular-nums}
   .track{height:4px;border-radius:2px;background:var(--panel-3);margin-top:6px;overflow:hidden}
@@ -185,13 +197,17 @@
   .get{flex:1;display:inline-flex;justify-content:center;align-items:center;gap:6px;font-size:13px;font-weight:600;text-decoration:none;color:var(--accent-ink);background:var(--accent);border-radius:6px;padding:8px 10px;transition:filter .15s}
   .get:hover{filter:brightness(1.12)}
   .get svg{width:13px;height:13px}
-  .details{display:inline-grid;place-items:center;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--ink-2);cursor:pointer;font-size:12.5px;font-weight:600;padding:7px 9px}
+  .details{display:inline-grid;place-items:center;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--ink-2);cursor:pointer;font-size:13px;font-weight:600;padding:7px 9px}
   .details:hover{color:var(--accent);border-color:var(--accent)}
+  .savebtn{display:inline-grid;place-items:center;width:36px;min-width:36px;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--ink-3);cursor:pointer;padding:0}
+  .savebtn:hover{color:var(--accent);border-color:var(--accent)}
+  .savebtn[aria-pressed="true"]{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 45%,var(--line));background:var(--accent-soft)}
+  .savebtn svg{width:17px;height:17px}
   .rate{color:var(--warn);font-family:ui-monospace,"SFMono-Regular",Consolas,monospace;font-size:11.5px}
 
   /* ---------- list view ---------- */
   .board.list{display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden;box-shadow:none}
-  .row{display:grid;grid-template-columns:52px minmax(0,1fr) 170px 165px;gap:16px;align-items:center;padding:11px 16px;border-bottom:1px solid var(--line)}
+  .row{display:grid;grid-template-columns:52px minmax(0,1fr) 170px 210px;gap:16px;align-items:center;padding:11px 16px;border-bottom:1px solid var(--line)}
   .row:last-child{border-bottom:0}
   .row:hover{background:var(--panel-2)}
   .row.is-new{box-shadow:inset 3px 0 0 var(--new)}
@@ -219,7 +235,7 @@
   .xmedia img{display:block;width:100%;max-height:440px;object-fit:contain;margin:auto}
   .xfoot{display:flex;align-items:center;gap:6px;margin-top:12px}
   .xfoot .b{text-transform:none;letter-spacing:0}
-  .xlink{margin-left:auto;font-size:12.5px;font-weight:600;color:var(--ink-2);text-decoration:none}
+  .xlink{margin-left:auto;font-size:13.5px;font-weight:600;color:var(--ink-2);text-decoration:none}
   .xlink:hover{color:var(--accent)}
 
   /* ---------- upcoming drops ---------- */
@@ -236,14 +252,14 @@
   .drop-status.delayed{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 45%,var(--line))}
   .drop-status.ended,.drop-status.cancelled{color:var(--crit);border-color:color-mix(in srgb,var(--crit) 40%,var(--line))}
   .drop h3{font-size:15px;line-height:1.3;margin:0;overflow-wrap:anywhere}
-  .drop-when{font-family:ui-monospace,"SFMono-Regular",Consolas,monospace;font-size:12px;font-weight:600;color:var(--ink-2);margin-top:6px}
-  .drop-date{font-size:11.5px;color:var(--ink-3);margin-top:2px}
-  .drop-text{font-size:13px;line-height:1.45;color:var(--ink-2);margin:0;padding:0 16px 13px;white-space:pre-wrap;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+  .drop-when{font-family:ui-monospace,"SFMono-Regular",Consolas,monospace;font-size:14px;font-weight:600;color:var(--ink-2);margin-top:6px}
+  .drop-date{font-size:13px;color:var(--ink-3);margin-top:2px}
+  .drop-text{font-size:14px;line-height:1.45;color:var(--ink-2);margin:0;padding:0 16px 13px;white-space:pre-wrap;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
   .drop-meta{display:flex;gap:6px;flex-wrap:wrap;padding:0 16px 12px}
   .drop-meta .b{text-transform:none;letter-spacing:0}
   .drop-code{font-family:ui-monospace,"SFMono-Regular",Consolas,monospace;font-size:12px;font-weight:650;background:var(--panel-2);border:1px dashed var(--line-2);border-radius:5px;padding:4px 7px}
   .drop-actions{display:flex;gap:7px;align-items:center;margin-top:auto;border-top:1px solid var(--line);padding:10px 16px}
-  .drop-actions a{font-size:12.5px;font-weight:600;color:var(--ink-2);text-decoration:none}
+  .drop-actions a{font-size:13.5px;font-weight:600;color:var(--ink-2);text-decoration:none}
   .drop-actions a:hover{color:var(--accent)}
   .drop-actions .primary{color:var(--accent)}
   .drop-sources{display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap;margin-left:auto}
@@ -251,7 +267,7 @@
 
   /* ---------- monitored Roblox events ---------- */
   .event-admin{display:grid;grid-template-columns:minmax(220px,1fr) minmax(150px,240px) auto;gap:8px;max-width:1180px;margin:0 auto 9px;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--panel)}
-  .event-admin label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--ink-3)}
+  .event-admin label{display:flex;flex-direction:column;gap:4px;font-size:14px;color:var(--ink-3)}
   .event-admin input{width:100%;height:36px;border:1px solid var(--line);border-radius:6px;background:var(--panel-2);color:var(--ink);font:inherit;font-size:14px;padding:7px 10px;outline:none}
   .event-admin input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
   .event-admin button{align-self:end;height:36px;border:0;border-radius:6px;background:var(--accent);color:var(--accent-ink);font-size:14px;font-weight:650;padding:0 15px;cursor:pointer}
@@ -290,7 +306,7 @@
   .more:hover{border-color:var(--line-2)}
   .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);opacity:0;pointer-events:none;z-index:40;display:flex;align-items:center;gap:10px;background:var(--ink);color:var(--bg);font-size:13.5px;font-weight:500;border-radius:6px;padding:9px 10px 9px 13px;box-shadow:0 10px 30px rgba(0,0,0,.25);transition:transform .2s ease,opacity .2s ease;max-width:calc(100vw - 32px)}
   .toast.show{transform:translate(-50%,0);opacity:1;pointer-events:auto}
-  .toast button{border:0;border-radius:4px;background:var(--new);color:var(--new-ink);font-weight:600;font-size:12.5px;padding:5px 9px;cursor:pointer;white-space:nowrap}
+  .toast button{border:0;border-radius:4px;background:var(--new);color:var(--new-ink);font-weight:600;font-size:13.5px;padding:5px 9px;cursor:pointer;white-space:nowrap}
   .detail{width:min(700px,calc(100vw - 28px));max-height:min(800px,calc(100vh - 28px));padding:0;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--ink);box-shadow:0 24px 70px rgba(0,0,0,.35);overflow:auto}
   .detail::backdrop{background:rgba(0,0,0,.58)}
   .detail-head{position:sticky;top:0;z-index:2;display:flex;justify-content:flex-end;padding:9px;background:var(--panel);border-bottom:1px solid var(--line)}
@@ -300,12 +316,12 @@
   .detail-art{aspect-ratio:1;border-radius:8px;background:var(--panel-2);border:1px solid var(--line);display:grid;place-items:center;overflow:hidden}
   .detail-art img{width:82%;height:82%;object-fit:contain}
   .detail h2{font-size:26px;line-height:1.12;letter-spacing:-.025em;margin:5px 0 8px;overflow-wrap:anywhere}
-  .detail-status{display:inline-flex;align-items:center;border-radius:4px;padding:3px 7px;background:var(--accent-soft);font-size:12px;font-weight:600;color:var(--accent)}
+  .detail-status{display:inline-flex;align-items:center;border-radius:4px;padding:3px 7px;background:var(--accent-soft);font-size:13px;font-weight:600;color:var(--accent)}
   .detail-game{margin:12px 0 0;color:var(--ink-2)}
   .detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:18px}
   .detail-kv{border:1px solid var(--line);background:var(--panel-2);border-radius:6px;padding:9px 10px}
   .detail-kv span{display:block;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
-  .detail-kv b{display:block;margin-top:3px;font-family:ui-monospace,"SFMono-Regular",Consolas,monospace;font-size:12.5px;font-weight:600;overflow-wrap:anywhere}
+  .detail-kv b{display:block;margin-top:3px;font-family:ui-monospace,"SFMono-Regular",Consolas,monospace;font-size:13px;font-weight:600;overflow-wrap:anywhere}
   .detail-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
   .detail-actions a,.detail-actions button{display:inline-flex;align-items:center;justify-content:center;border-radius:6px;padding:8px 12px;font-size:13px;font-weight:600;text-decoration:none;cursor:pointer}
   .detail-primary{border:0;background:var(--accent);color:var(--accent-ink)}
@@ -316,7 +332,10 @@
 
   @media (max-width:860px){
     .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
-    .row{grid-template-columns:48px minmax(0,1fr) 155px;grid-template-areas:"t i s" "t i a"}
+    .pulse{grid-template-columns:1fr}
+    .pulse-item{border-right:0;border-bottom:1px solid var(--line)}
+    .pulse-item:last-child{border-bottom:0}
+    .row{grid-template-columns:48px minmax(0,1fr) 190px;grid-template-areas:"t i s" "t i a"}
     .row .rt{grid-area:t}.row .ri{grid-area:i}.row .stock{grid-area:s}.row .actions{grid-area:a}
   }
   @media (max-width:560px){
@@ -359,6 +378,7 @@
       Free Limiteds
     </div>
     <span class="live" id="live"><span class="dot"></span><span id="stamp">connecting&hellip;</span></span>
+    <button class="iconbtn" id="share" type="button" aria-label="Share current view" title="Share current view"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="m8.2 10.8 7.6-4.5M8.2 13.2l7.6 4.5"/></svg></button>
     <button class="iconbtn" id="theme" type="button" aria-label="Toggle theme" title="Theme"></button>
   </div>
 
@@ -373,11 +393,18 @@
       <div class="stat"><div class="n" id="s-month">&mdash;</div><div class="l">last 30 days</div></div>
       <div class="stat"><div class="n" id="s-copies">&mdash;</div><div class="l">copies up for grabs</div></div>
     </div>
+    <section class="pulse" id="pulse" aria-label="Live pulse" hidden>
+      <div class="pulse-head"><b>Live pulse</b><span>A quick read across the board</span></div>
+      <button class="pulse-item" id="pulse-active" type="button" data-pulse-tab="active" hidden><span class="pulse-kind">Moving now</span><span class="pulse-name"></span><span class="pulse-meta"></span></button>
+      <button class="pulse-item" id="pulse-drop" type="button" data-pulse-tab="upcoming" hidden><span class="pulse-kind">Next UGC drop</span><span class="pulse-name"></span><span class="pulse-meta"></span></button>
+      <button class="pulse-item" id="pulse-event" type="button" data-pulse-tab="events" hidden><span class="pulse-kind">Next game event</span><span class="pulse-name"></span><span class="pulse-meta"></span></button>
+    </section>
   </header>
 
   <div class="controls" id="controls">
     <div class="tabs" role="tablist" id="tabs">
       <button type="button" role="tab" data-v="all" aria-selected="true">All in stock <span class="tc" id="tc-all"></span></button>
+      <button type="button" role="tab" data-v="saved" aria-selected="false" title="Items saved on this browser">Saved <span class="tc" id="tc-saved"></span></button>
       <button type="button" role="tab" data-v="upcoming" aria-selected="false" title="Free UGC announcements captured before release">Upcoming <span class="tc" id="tc-upcoming"></span></button>
       <button type="button" role="tab" data-v="active" aria-selected="false" title="Items with claims observed in roughly the last hour">Claiming now <span class="tc" id="tc-active"></span></button>
       <button type="button" role="tab" data-v="waiting" aria-selected="false" title="Items whose stock has not started moving">Waiting <span class="tc" id="tc-waiting"></span></button>
@@ -469,6 +496,7 @@
   // Each tab has its own sort menu; the first entry is that tab's default.
   var SORT_OPTS = {
     all: [['new', 'Newest first'], ['hot', 'Hottest (claims / hr)'], ['stock', 'Most copies left'], ['pct', 'Most % left'], ['low', 'Almost gone']],
+    saved: [['active', 'Most active now'], ['low', 'Almost gone'], ['new', 'Newest first'], ['stock', 'Most copies left']],
     upcoming: [['next', 'Next release'], ['recent', 'Newest announcement'], ['stock', 'Largest stock'], ['account', 'Source account']],
     active: [['active', 'Most active now'], ['recent', 'Last claimed'], ['low', 'Almost gone'], ['new', 'Newest first']],
     waiting: [['new', 'Newest first'], ['stock', 'Most copies'], ['pct', 'Most % left']],
@@ -479,13 +507,14 @@
     ended: [['ended', 'Ended most recently'], ['new', 'Newest item'], ['total', 'Largest drop']]
   };
 
-  var rows = [], view = [], shown = PAGE, fetchedAt = null, nextPollAt = 0, lastSeen = 0, knownIds = null, pendingNew = 0;
+  var rows = [], view = [], shown = PAGE, fetchedAt = null, nextPollAt = 0, lastSeen = 0, knownIds = null, pendingNew = 0, pendingSaved = 0, pendingSavedMessage = '';
   // "Still claimable" tab: items the Discord watcher saw being claimed on Roblox (/api/claimable).
   var claimRows = [], claimInfo = null, claimErr = null, claimFetched = 0;
   var endedRows = [], endedInfo = null, endedErr = null, endedFetched = 0;
   var xRows = [], xInfo = null, xErr = null, xFetched = 0, xLoading = false;
   var upcomingRows = [], upcomingInfo = null, upcomingErr = null, upcomingFetched = 0, upcomingLoading = false;
   var eventRows = [], eventInfo = null, eventErr = null, eventFetched = 0, eventLoading = false;
+  var savedItems = {};
   var state = { tab: 'all', range: 'month', min: 1, q: '', sort: 'new', reverse: false, type: '', method: '', dropStatus: 'any', game: '', view: 'grid', onlyNew: false };
 
   var $ = function (id) { return document.getElementById(id); };
@@ -521,6 +550,99 @@
     return r.a >= nowS() - RANGES[state.range];
   }
 
+  /* ---------- personal watchlist (browser-local) ---------- */
+  function readSaved() {
+    savedItems = {};
+    try {
+      var parsed = JSON.parse(store('flb-saved-v1') || '{}');
+      Object.keys(parsed || {}).forEach(function (itemId) {
+        var item = parsed[itemId];
+        if (/^\d{1,20}$/.test(itemId) && item && String(item.i) === itemId && typeof item.n === 'string' &&
+            Number.isFinite(item.a) && Number.isFinite(item.r) && Number.isFinite(item.t)) savedItems[itemId] = item;
+      });
+    } catch (e) {}
+  }
+  function savedLow(r) { return !r.endedAt && r.r < r.t && (pctLeft(r) <= 0.1 || r.r <= 20); }
+  function savedSnapshot(r, previous) {
+    var out = {};
+    ['i', 'n', 'a', 'r', 't', 'g', 'gi', 'gx', 'ty', 'th', 'seen', 'hour', 'endedAt', 'reason'].forEach(function (key) {
+      if (r[key] !== undefined) out[key] = r[key];
+    });
+    out.savedAt = previous && previous.savedAt ? previous.savedAt : Math.floor(nowS());
+    out.checkedAt = Math.floor(nowS());
+    out._alerts = Object.assign({}, previous && previous._alerts);
+    return out;
+  }
+  function persistSaved() {
+    store('flb-saved-v1', JSON.stringify(savedItems));
+    $('tc-saved').textContent = Object.keys(savedItems).length ? nf(Object.keys(savedItems).length) : '';
+  }
+  function isSaved(id) { return Boolean(savedItems[String(id)]); }
+  function knownItemMap() {
+    var found = new Map();
+    endedRows.forEach(function (item) { found.set(String(item.i), item); });
+    rows.forEach(function (item) { found.set(String(item.i), item); });
+    claimRows.forEach(function (item) { found.set(String(item.i), item); });
+    return found;
+  }
+  function savedRows() {
+    var known = knownItemMap();
+    return Object.keys(savedItems).map(function (itemId) {
+      return known.get(itemId) || Object.assign({}, savedItems[itemId], { savedMissing: true });
+    });
+  }
+  function showSavedSignal(message) {
+    if (document.hidden) {
+      pendingSaved++;
+      pendingSavedMessage = pendingSaved === 1 ? message : pendingSaved + ' saved-item updates waiting';
+      tabBadge();
+      return;
+    }
+    toast(message, 'View saved', function () {
+      state.tab = 'saved'; state.sort = SORT_OPTS.saved[0][0]; state.reverse = false;
+      apply();
+      window.scrollTo({ top: $('controls').offsetTop, behavior: 'smooth' });
+    });
+  }
+  function syncSaved(list, notify) {
+    var signals = [], changed = false;
+    list.forEach(function (item) {
+      var itemId = String(item.i), previous = savedItems[itemId];
+      if (!previous) return;
+      if (item.endedAt && rows.some(function (current) { return String(current.i) === itemId; })) return;
+      var next = savedSnapshot(item, previous), alerts = next._alerts;
+      if (notify && item.endedAt && !alerts.ended) {
+        alerts.ended = true;
+        signals.push(item.n + ' has ended');
+      } else if (notify && savedLow(item) && !alerts.low) {
+        alerts.low = true; alerts.started = true;
+        signals.push(item.n + ' is almost gone');
+      } else if (notify && !item.endedAt && item.r < item.t && !alerts.started) {
+        alerts.started = true;
+        signals.push(item.n + ' started claiming');
+      }
+      savedItems[itemId] = next;
+      changed = true;
+    });
+    if (changed) persistSaved();
+    if (signals.length) showSavedSignal(signals.length === 1 ? signals[0] : signals.length + ' saved items changed');
+  }
+  function toggleSaved(item) {
+    var itemId = String(item.i);
+    if (savedItems[itemId]) {
+      delete savedItems[itemId];
+      persistSaved();
+      toast('Removed ' + item.n + ' from Saved');
+    } else {
+      var snapshot = savedSnapshot(item, null);
+      snapshot._alerts = { started: item.r < item.t, low: savedLow(item), ended: Boolean(item.endedAt) };
+      savedItems[itemId] = snapshot;
+      persistSaved();
+      toast('Saved ' + item.n + ' on this browser');
+    }
+    if (state.tab === 'saved') apply(true); else render();
+  }
+
   /* ---------- URL state (shareable filters) ---------- */
   var DEFAULTS = JSON.parse(JSON.stringify(state));
   function readHash() {
@@ -547,7 +669,7 @@
     var p = new URLSearchParams();
     if (state.tab !== 'all') p.set('tab', state.tab);
     ['range', 'min', 'q', 'type', 'method', 'dropStatus', 'game'].forEach(function (k) {
-      if (['active', 'claimable', 'ended', 'x', 'upcoming', 'events'].indexOf(state.tab) !== -1 && (k === 'range' || k === 'min')) return;
+      if (['saved', 'active', 'claimable', 'ended', 'x', 'upcoming', 'events'].indexOf(state.tab) !== -1 && (k === 'range' || k === 'min')) return;
       if (['x', 'upcoming', 'events'].indexOf(state.tab) !== -1 && ['type', 'game'].indexOf(k) !== -1) return;
       if (state.tab !== 'upcoming' && ['method', 'dropStatus'].indexOf(k) !== -1) return;
       if (k === 'dropStatus') {
@@ -650,11 +772,12 @@
     }
     var watcher = state.tab === 'active' || state.tab === 'claimable';
     var ended = state.tab === 'ended';
-    var source = watcher ? claimRows : ended ? endedRows : rows;
+    var personal = state.tab === 'saved';
+    var source = personal ? savedRows() : watcher ? claimRows : ended ? endedRows : rows;
     view = source.filter(function (r) {
-      if (!watcher && !ended && !inRange(r)) return false;
-      if (!watcher && !ended && r.r < state.min) return false;
-      if (!watcher && !ended && state.onlyNew && !isNew(r)) return false;
+      if (!watcher && !ended && !personal && !inRange(r)) return false;
+      if (!watcher && !ended && !personal && r.r < state.min) return false;
+      if (!watcher && !ended && !personal && state.onlyNew && !isNew(r)) return false;
       if (state.tab === 'active' && !(r.hour > 0)) return false;
       if (state.tab === 'waiting' && r.r !== r.t) return false;
       if (state.tab === 'low' && !(r.r < r.t && (pctLeft(r) <= 0.1 || r.r <= 20))) return false;
@@ -677,11 +800,12 @@
     var xfeed = state.tab === 'x';
     var schedule = state.tab === 'upcoming';
     var events = state.tab === 'events';
+    var personal = state.tab === 'saved';
     Array.prototype.forEach.call($('tabs').querySelectorAll('button'), function (b) {
       b.setAttribute('aria-selected', String(b.getAttribute('data-v') === state.tab));
     });
-    $('range').hidden = watcher || ended || xfeed || schedule || events;
-    $('min').hidden = watcher || ended || xfeed || schedule || events;
+    $('range').hidden = watcher || ended || xfeed || schedule || events || personal;
+    $('min').hidden = watcher || ended || xfeed || schedule || events || personal;
     $('type-label').hidden = xfeed || schedule || events;
     $('type-wrap').hidden = xfeed || schedule || events;
     $('method-label').hidden = !schedule;
@@ -691,7 +815,8 @@
     $('event-admin').hidden = !events;
     $('event-games').hidden = !events || !eventInfo || !eventInfo.games || !eventInfo.games.length;
     var note = $('tab-note');
-    note.hidden = !(watcher || ended || xfeed || schedule || events);
+    note.hidden = !(watcher || ended || xfeed || schedule || events || personal);
+    if (personal) note.innerHTML = '<b>Your shortlist:</b> saved only on this browser · while this page is open, you will get a notice when a saved item starts claiming, becomes scarce, or ends.';
     if (state.tab === 'active') note.innerHTML = claimInfo
       ? '<b>Live activity:</b> 500+ copy items with claims observed in roughly the last hour · checked ' + rel(Date.parse(claimInfo.updatedAt) / 1000)
       : 'Items whose Roblox stock moved in roughly the last hour.';
@@ -733,9 +858,9 @@
           '<button type="button" data-remove-event-game="' + esc(game.placeId) + '" aria-label="Stop monitoring ' + esc(game.name) + '" title="Stop monitoring">&times;</button></span>';
       }).join('');
     }
-    qEl.placeholder = events ? 'Search monitored events' : schedule ? 'Search upcoming drops' : xfeed ? 'Search X updates' : 'Search items or games';
-    qEl.setAttribute('aria-label', events ? 'Search monitored events' : schedule ? 'Search upcoming drops' : xfeed ? 'Search X updates' : 'Search items and games');
-    refreshEl.title = events ? 'Refresh monitored events' : schedule ? 'Refresh upcoming drops' : xfeed ? 'Refresh X updates' : watcher ? 'Refresh watcher data' : ended ? 'Refresh recent archive' : 'Fetch fresh data from Rolimon\'s';
+    qEl.placeholder = personal ? 'Search saved items' : events ? 'Search monitored events' : schedule ? 'Search upcoming drops' : xfeed ? 'Search X updates' : 'Search items or games';
+    qEl.setAttribute('aria-label', personal ? 'Search saved items' : events ? 'Search monitored events' : schedule ? 'Search upcoming drops' : xfeed ? 'Search X updates' : 'Search items and games');
+    refreshEl.title = personal ? 'Refresh saved item data' : events ? 'Refresh monitored events' : schedule ? 'Refresh upcoming drops' : xfeed ? 'Refresh X updates' : watcher ? 'Refresh watcher data' : ended ? 'Refresh recent archive' : 'Fetch fresh data from Rolimon\'s';
     if (sortEl.getAttribute('data-tab') !== state.tab) {
       sortEl.innerHTML = SORT_OPTS[state.tab].map(function (o) { return '<option value="' + o[0] + '">' + o[1] + '</option>'; }).join('');
       sortEl.setAttribute('data-tab', state.tab);
@@ -762,14 +887,18 @@
 
   /* ---------- rendering ---------- */
   var ICON_PLAY = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5Z"/></svg>';
+  var ICON_SAVE = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m12 2.7 2.72 5.5 6.07.88-4.4 4.28 1.04 6.05L12 16.56l-5.43 2.85 1.04-6.05-4.4-4.28 6.07-.88L12 2.7Z"/></svg>';
 
   function parts(r) {
-    var p = pctLeft(r), fresh = nowS() - r.a < 86400, ended = !!r.endedAt;
+    var p = pctLeft(r), fresh = nowS() - r.a < 86400, ended = !!r.endedAt, missing = !!r.savedMissing, saved = isSaved(r.i);
     var cat = 'https://www.roblox.com/catalog/' + r.i + '/';
     return {
       cat: cat,
       nw: isNew(r),
-      age: ended
+      saved: saved,
+      age: missing
+        ? '<span class="b age" title="This item is no longer present in the current feeds">Last seen</span>'
+        : ended
         ? '<span class="b age ended" title="' + esc(fullDate(r.endedAt)) + '">' + (r.reason === 'off-sale' ? 'Off sale' : 'Sold out') + ' ' + rel(r.endedAt) + '</span>'
         : r.seen
         ? '<span class="b age claimed" title="Last claim seen ' + esc(fullDate(r.seen)) + '">✓ ' + rel(r.seen) + '</span>'
@@ -781,15 +910,17 @@
         : '<span>No game listed</span>',
       stock:
         '<div class="stock"><div class="nums"><span><b>' + nf(r.r) + '</b> / ' + compact(r.t) + ' left</span>' +
-        (ended ? '<span class="pct">' + (r.reason === 'off-sale' ? 'off sale' : 'ended') + '</span>'
+        (missing ? '<span class="pct">last seen</span>'
+          : ended ? '<span class="pct">' + (r.reason === 'off-sale' ? 'off sale' : 'ended') + '</span>'
           : r.hour ? '<span class="rate" title="Claims in about the last hour">+' + compact(r.hour) + '/hr</span>'
           : state.sort === 'hot' ? '<span class="rate">' + compact(Math.round(rate(r))) + '/hr</span>'
           : '<span class="pct">' + (p < 0.01 ? '&lt;1' : Math.round(p * 100)) + '%</span>') +
         '</div><div class="track"><i class="fill ' + (p <= 0.1 || r.r <= 3 ? 'crit' : p <= 0.35 || r.r <= 20 ? 'warn' : 'ok') + '" style="width:' + (ended ? 0 : Math.max(2, Math.round(p * 100))) + '%"></i></div></div>',
       actions:
         '<div class="actions">' +
-          (r.gi ? '<a class="get" href="https://www.roblox.com/games/' + esc(r.gi) + '" target="_blank" rel="noopener">' + ICON_PLAY + (ended ? 'View game' : 'Get it') + '</a>' : '<a class="get" href="' + cat + '" target="_blank" rel="noopener">View item</a>') +
+          (r.gi ? '<a class="get" href="https://www.roblox.com/games/' + esc(r.gi) + '" target="_blank" rel="noopener">' + ICON_PLAY + (ended || missing ? 'View game' : 'Get it') + '</a>' : '<a class="get" href="' + cat + '" target="_blank" rel="noopener">View item</a>') +
           '<button class="details" type="button" data-detail="' + esc(r.i) + '" aria-label="Show details for ' + esc(r.n) + '">Details</button>' +
+          '<button class="savebtn" type="button" data-save="' + esc(r.i) + '" aria-pressed="' + String(saved) + '" aria-label="' + (saved ? 'Remove ' : 'Save ') + esc(r.n) + '" title="' + (saved ? 'Remove from Saved' : 'Save item') + '">' + ICON_SAVE + '</button>' +
         '</div>'
     };
   }
@@ -802,7 +933,7 @@
 
   function cardHTML(r) {
     var p = parts(r);
-    return '<article class="card' + (p.nw ? ' is-new' : '') + '">' +
+    return '<article class="card' + (p.nw ? ' is-new' : '') + (p.saved ? ' is-saved' : '') + '">' +
       '<a class="art" href="' + p.cat + '" target="_blank" rel="noopener" tabindex="-1" aria-hidden="true">' + img(r, '') +
         '<span class="badges">' + (p.nw ? '<span class="b new">New</span>' : '') + p.type + '</span>' + p.age +
       '</a>' +
@@ -815,7 +946,7 @@
 
   function rowHTML(r) {
     var p = parts(r);
-    return '<div class="row' + (p.nw ? ' is-new' : '') + '">' +
+    return '<div class="row' + (p.nw ? ' is-new' : '') + (p.saved ? ' is-saved' : '') + '">' +
       '<div class="rt">' + (r.th ? img(r, 'rthumb') : '<div class="rthumb"></div>') + '</div>' +
       '<div class="ri"><h3 class="name"><a href="' + p.cat + '" target="_blank" rel="noopener" title="' + esc(r.n) + '">' + esc(r.n) + '</a></h3>' +
         '<div class="meta">' + (p.nw ? '<span class="b new">New</span>' : '') + p.age + p.type + '<span class="game">' + p.game + '</span></div></div>' +
@@ -841,7 +972,7 @@
         '<a class="xtime" href="' + esc(post.url) + '" target="_blank" rel="noopener" title="' + esc(whenTitle) + '">' + esc(when) + '</a></div>' +
       '<p class="xtext">' + esc(post.text || '(Post has no text)') + '</p>' + media +
       '<div class="xfoot">' + (post.repost ? '<span class="b">Repost</span>' : '') + (post.reply ? '<span class="b">Reply</span>' : '') +
-        '<a class="xlink" href="' + esc(post.url) + '" target="_blank" rel="noopener">View on X&nbsp;&rarr;</a></div>' +
+        '<a class="xlink" href="' + esc(post.url) + '" target="_blank" rel="noopener">View on X</a></div>' +
     '</article>';
   }
 
@@ -869,8 +1000,8 @@
       ? nf(drop.currentStock) + (drop.totalStock ? ' / ' + nf(drop.totalStock) + ' left' : ' left')
       : drop.expectedStock ? nf(drop.expectedStock) + ' expected stock' : '';
     var date = drop.scheduledAt
-      ? 'Your time: ' + new Date(drop.scheduledAt).toLocaleString('en-US', {
-          year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short'
+      ? 'MYT: ' + new Date(drop.scheduledAt).toLocaleString('en-MY', {
+          year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Kuala_Lumpur'
         }) + (drop.timezone ? ' · source timezone: ' + drop.timezone : '')
       : 'The source did not confirm a release time.';
     var image = drop.image
@@ -878,7 +1009,7 @@
       : '<span class="drop-img xavatar-fallback" aria-hidden="true">?</span>';
     var sources = drop.sources && drop.sources.length ? drop.sources : [{ username: drop.username, sourceUrl: drop.sourceUrl }];
     var sourceLinks = sources.slice(0, 4).map(function (source) {
-      return '<a class="drop-source" href="' + esc(source.sourceUrl) + '" target="_blank" rel="noopener">@' + esc(source.username) + '&nbsp;&rarr;</a>';
+      return '<a class="drop-source" href="' + esc(source.sourceUrl) + '" target="_blank" rel="noopener">@' + esc(source.username) + '</a>';
     }).join('');
     if (sources.length > 4) sourceLinks += '<span class="drop-source">+' + nf(sources.length - 4) + '</span>';
     var meta = [
@@ -912,6 +1043,7 @@
   }
 
   function statusText(r) {
+    if (r.savedMissing) return 'Not in the current feed';
     if (r.endedAt) return r.reason === 'off-sale' ? 'Went off sale' : 'Sold out';
     if (r.hour > 0) return 'Claiming now · +' + compact(r.hour) + '/hr';
     if (r.r === r.t) return 'Waiting to start';
@@ -920,7 +1052,7 @@
   }
 
   function findItem(id) {
-    return rows.concat(claimRows, endedRows).find(function (r) { return String(r.i) === String(id); });
+    return savedRows().concat(claimRows, rows, endedRows).find(function (r) { return String(r.i) === String(id); });
   }
 
   function openDetail(r) {
@@ -945,6 +1077,7 @@
           (game ? '<a class="detail-primary" href="' + game + '" target="_blank" rel="noopener">Join game</a>' : '') +
           '<a class="detail-secondary" href="' + cat + '" target="_blank" rel="noopener">View catalog</a>' +
           '<button class="detail-secondary" type="button" data-copy="' + cat + '">Copy item link</button>' +
+          '<button class="detail-secondary" type="button" data-save="' + esc(r.i) + '">' + (isSaved(r.i) ? 'Remove from Saved' : 'Save item') + '</button>' +
         '</div>' +
       '</div></div>';
     detailEl.showModal();
@@ -1083,6 +1216,14 @@
       moreEl.hidden = true;
       return;
     }
+    if (!view.length && state.tab === 'saved') {
+      var savedFiltered = Boolean(state.q || state.type || state.game);
+      board.innerHTML = '<div class="empty"><b>' + (savedFiltered ? 'Nothing matches your saved filters.' : 'Your Saved list is empty.') + '</b>' +
+        (savedFiltered ? 'Try clearing the search or filters.' : 'Use the star button on any item to keep a personal shortlist on this browser.') +
+        (savedFiltered ? '<br><button class="more" type="button" id="reset">Clear filters</button>' : '') + '</div>';
+      moreEl.hidden = true;
+      return;
+    }
     if (!view.length) {
       var filtered = state.q || state.type || state.game || state.min > 1 || state.onlyNew;
       var emptyTitle = state.tab === 'waiting' ? 'Nothing is waiting to start.' : state.tab === 'low' ? 'Nothing is almost gone.' : rows.length ? 'Nothing matches.' : 'No items yet.';
@@ -1124,6 +1265,7 @@
     $('tc-all').textContent = nf(rows.length);
     $('tc-waiting').textContent = nf(rows.filter(function (r) { return r.r === r.t; }).length);
     $('tc-low').textContent = nf(rows.filter(function (r) { return r.r < r.t && (pctLeft(r) <= 0.1 || r.r <= 20); }).length);
+    $('tc-saved').textContent = Object.keys(savedItems).length ? nf(Object.keys(savedItems).length) : '';
     $('s-new').textContent = lastSeen ? nf(fresh) : '—';
     $('s-new-l').textContent = lastSeen ? 'new since last visit' : 'first visit — welcome';
     $('s-new-btn').disabled = !lastSeen;
@@ -1135,6 +1277,39 @@
     typeEl.innerHTML = '<option value="">All types</option>' + opts.map(function (l) {
       return '<option value="' + esc(l) + '">' + esc(l) + ' (' + nf(counts[l]) + ')</option>';
     }).join('');
+  }
+
+  function setPulse(id, item, name, meta) {
+    var node = $(id);
+    node.hidden = !item;
+    if (!item) return;
+    node.querySelector('.pulse-name').textContent = name;
+    node.querySelector('.pulse-meta').textContent = meta;
+  }
+  function updatePulse() {
+    var active = claimRows.filter(function (item) { return item.hour > 0; }).sort(function (a, b) { return b.hour - a.hour; })[0];
+    setPulse('pulse-active', active, active && active.n, active ? '+' + compact(active.hour) + '/hr · ' + compact(active.r) + ' left' : '');
+
+    var drops = upcomingRows.filter(function (drop) { return ['live', 'upcoming', 'announced', 'delayed'].indexOf(drop.status) !== -1; });
+    drops.sort(function (a, b) {
+      if (a.status === 'live' && b.status !== 'live') return -1;
+      if (b.status === 'live' && a.status !== 'live') return 1;
+      return (a.scheduledAt ? Date.parse(a.scheduledAt) : Infinity) - (b.scheduledAt ? Date.parse(b.scheduledAt) : Infinity);
+    });
+    var drop = drops[0];
+    setPulse('pulse-drop', drop, drop && drop.title, drop ? countdownText(drop) : '');
+
+    var events = eventRows.slice().sort(function (a, b) {
+      var now = Date.now(), alive = Date.parse(a.start) <= now && Date.parse(a.end) > now, blive = Date.parse(b.start) <= now && Date.parse(b.end) > now;
+      return Number(blive) - Number(alive) || Date.parse(a.start) - Date.parse(b.start);
+    });
+    var event = events[0], eventMeta = '';
+    if (event) {
+      var start = Date.parse(event.start), end = Date.parse(event.end), now = Date.now();
+      eventMeta = start <= now && end > now ? 'Live · ends ' + duration(end - now) : 'Starts in ' + duration(start - now);
+    }
+    setPulse('pulse-event', event, event && event.title, eventMeta);
+    $('pulse').hidden = !active && !drop && !event;
   }
 
   function stamp() {
@@ -1157,17 +1332,27 @@
     clearTimeout(toastTimer);
     toastTimer = setTimeout(function () { toastEl.classList.remove('show'); }, 9000);
   }
-  function tabBadge() { document.title = (pendingNew ? '(' + pendingNew + ') ' : '') + 'Free Limiteds Board'; }
-  document.addEventListener('visibilitychange', function () { if (!document.hidden) { pendingNew = 0; tabBadge(); } });
+  function tabBadge() {
+    var pending = pendingNew + pendingSaved;
+    document.title = (pending ? '(' + pending + ') ' : '') + 'Free Limiteds Board';
+  }
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) return;
+    pendingNew = 0;
+    var savedMessage = pendingSavedMessage;
+    pendingSaved = 0; pendingSavedMessage = '';
+    tabBadge();
+    if (savedMessage) showSavedSignal(savedMessage);
+  });
 
   /* ---------- data ---------- */
   var loading = false;
   function load(bust, silent) {
-    if (loading) return;
+    if (loading) return Promise.resolve();
     loading = true;
     refreshEl.disabled = true;
-    if (!rows.length && !silent && state.tab !== 'x' && state.tab !== 'upcoming' && state.tab !== 'events') skeleton();
-    fetch('/api/items' + (bust ? '?t=' + Date.now() : ''))
+    if (!rows.length && !silent && state.tab !== 'saved' && state.tab !== 'x' && state.tab !== 'upcoming' && state.tab !== 'events') skeleton();
+    return fetch('/api/items' + (bust ? '?t=' + Date.now() : ''))
       .then(function (r) {
         if (!r.ok) return r.json().catch(function () { return {}; }).then(function (j) { throw new Error(j.error || 'HTTP ' + r.status); });
         return r.json();
@@ -1178,6 +1363,7 @@
         knownIds = {};
         incoming.forEach(function (r) { knownIds[r.i] = 1; });
         rows = incoming;
+        syncSaved(incoming, true);
         fetchedAt = Date.parse(d.fetchedAt);
         nextPollAt = Date.now() + POLL_MS;
         liveEl.className = 'live on';
@@ -1199,12 +1385,12 @@
       .catch(function (err) {
         liveEl.className = 'live err';
         stampEl.textContent = 'offline';
-        if (!rows.length && state.tab !== 'x' && state.tab !== 'upcoming' && state.tab !== 'events') {
+        if (!rows.length && state.tab !== 'saved' && state.tab !== 'x' && state.tab !== 'upcoming' && state.tab !== 'events') {
           board.className = 'board grid';
           board.innerHTML = '<div class="empty"><b>Could not reach the feed.</b>' + esc(err.message) +
             '<br><button class="more" type="button" id="retry">Try again</button></div>';
           countEl.textContent = '';
-        } else if (state.tab !== 'x' && state.tab !== 'upcoming' && state.tab !== 'events') toast('Refresh failed: ' + err.message);
+        } else if (state.tab !== 'saved' && state.tab !== 'x' && state.tab !== 'upcoming' && state.tab !== 'events') toast('Refresh failed: ' + err.message);
       })
       .then(function () {
         loading = false;
@@ -1221,11 +1407,12 @@
           return j;
         });
       })
-      .then(function (d) { claimRows = d.items || []; claimInfo = d; claimErr = null; })
+      .then(function (d) { claimRows = d.items || []; claimInfo = d; claimErr = null; syncSaved(claimRows, true); })
       .catch(function (err) { claimErr = err.message; })
       .then(function () {
         $('tc-claim').textContent = claimErr ? '' : nf(claimRows.length);
         $('tc-active').textContent = claimErr ? '' : nf(claimRows.filter(function (r) { return r.hour > 0; }).length);
+        updatePulse();
         if (state.tab === 'claimable' || state.tab === 'active') apply(true);
       });
   }
@@ -1239,7 +1426,7 @@
           return j;
         });
       })
-      .then(function (d) { endedRows = d.items || []; endedInfo = d; endedErr = null; })
+      .then(function (d) { endedRows = d.items || []; endedInfo = d; endedErr = null; syncSaved(endedRows, true); })
       .catch(function (err) { endedErr = err.message; })
       .then(function () {
         $('tc-ended').textContent = endedErr ? '' : nf(endedRows.length);
@@ -1296,6 +1483,7 @@
         $('tc-upcoming').textContent = upcomingErr ? '' : nf(upcomingRows.filter(function (drop) {
           return ['upcoming', 'announced', 'delayed', 'live'].indexOf(drop.status) !== -1;
         }).length);
+        updatePulse();
         if (state.tab === 'upcoming') apply(true);
       });
   }
@@ -1316,6 +1504,7 @@
       .then(function () {
         eventLoading = false;
         $('tc-events').textContent = eventErr ? '' : nf(eventRows.length);
+        updatePulse();
         if (state.tab === 'events') apply(true);
       });
   }
@@ -1348,10 +1537,9 @@
       if (b) fn(b.getAttribute('data-v'));
     });
   }
-  $('tabs').addEventListener('click', function (e) {
-    var b = e.target.closest('button[data-v]');
-    if (!b || b.getAttribute('data-v') === state.tab) return;
-    state.tab = b.getAttribute('data-v');
+  function selectTab(tab) {
+    if (!SORT_OPTS[tab] || tab === state.tab) return;
+    state.tab = tab;
     state.sort = SORT_OPTS[state.tab][0][0];
     state.reverse = false;
     state.onlyNew = false;
@@ -1361,6 +1549,16 @@
     if (state.tab === 'x' && Date.now() - xFetched > 60000) loadX(false);
     if (state.tab === 'upcoming' && Date.now() - upcomingFetched > 60000) loadUpcoming(false);
     if (state.tab === 'events' && Date.now() - eventFetched > 60000) loadEvents(false);
+  }
+  $('tabs').addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-v]');
+    if (b) selectTab(b.getAttribute('data-v'));
+  });
+  $('pulse').addEventListener('click', function (e) {
+    var button = e.target.closest('[data-pulse-tab]');
+    if (!button) return;
+    selectTab(button.getAttribute('data-pulse-tab'));
+    window.scrollTo({ top: $('controls').offsetTop, behavior: 'smooth' });
   });
   segClick('range', function (v) { state.range = v; apply(); });
   segClick('min', function (v) { state.min = +v; apply(); });
@@ -1385,7 +1583,10 @@
   });
   moreEl.addEventListener('click', function () { shown += PAGE; render(); });
   refreshEl.addEventListener('click', function () {
-    if (state.tab === 'active' || state.tab === 'claimable') loadClaimable(true).then(function () {
+    if (state.tab === 'saved') load(true, true).then(function () {
+      return Promise.all([loadClaimable(true), loadEnded(true)]);
+    }).then(function () { toast('Saved item data refreshed'); apply(true); });
+    else if (state.tab === 'active' || state.tab === 'claimable') loadClaimable(true).then(function () {
       toast(claimErr ? 'Refresh failed: ' + claimErr : state.tab === 'active' ? nf(claimRows.filter(function (r) { return r.hour > 0; }).length) + ' items moving now' : nf(claimRows.length) + ' items still claimable');
     });
     else if (state.tab === 'ended') loadEnded(true).then(function () { toast(endedErr ? 'Refresh failed: ' + endedErr : nf(endedRows.length) + ' recently ended items'); });
@@ -1396,6 +1597,12 @@
   });
 
   board.addEventListener('click', function (e) {
+    var save = e.target.closest('[data-save]');
+    if (save) {
+      var savedItem = findItem(save.getAttribute('data-save'));
+      if (savedItem) toggleSaved(savedItem);
+      return;
+    }
     var detail = e.target.closest('[data-detail]');
     if (detail) {
       openDetail(findItem(detail.getAttribute('data-detail')));
@@ -1468,6 +1675,12 @@
   $('detail-close').addEventListener('click', function () { detailEl.close(); });
   detailEl.addEventListener('click', function (e) { if (e.target === detailEl) detailEl.close(); });
   detailContentEl.addEventListener('click', function (e) {
+    var save = e.target.closest('[data-save]');
+    if (save) {
+      var item = findItem(save.getAttribute('data-save'));
+      if (item) { toggleSaved(item); openDetail(item); }
+      return;
+    }
     var b = e.target.closest('[data-copy]');
     if (!b) return;
     if (!navigator.clipboard) return toast('Copy is not available in this browser');
@@ -1513,20 +1726,31 @@
   }
   $('theme').addEventListener('click', function () { setTheme({ auto: 'light', light: 'dark', dark: 'auto' }[theme]); });
   setTheme(theme === 'light' || theme === 'dark' ? theme : 'auto');
+  $('share').addEventListener('click', function () {
+    var data = { title: 'Free Limiteds Board', url: location.href };
+    if (navigator.share) {
+      navigator.share(data).catch(function (error) { if (error.name !== 'AbortError') toast('Could not share this view'); });
+    } else if (navigator.clipboard) {
+      navigator.clipboard.writeText(data.url).then(function () { toast('Current view link copied'); }).catch(function () { toast('Could not copy the link'); });
+    } else toast('Sharing is not available in this browser');
+  });
 
   /* ---------- boot ---------- */
   lastSeen = +(store('flb-last-seen') || 0);
+  readSaved();
+  persistSaved();
   readHash();
   syncControls();
-  load(false, false);
+  if (state.tab === 'saved') apply();
+  load(false, false).then(function () { return loadEnded(false); });
   loadClaimable(false);
-  loadEnded(false);
   loadX(false);
   loadUpcoming(false);
   loadEvents(false);
   setInterval(stamp, 1000);
   setInterval(tickCountdowns, 1000);
   setInterval(tickEventCountdowns, 1000);
+  setInterval(updatePulse, 1000);
   // The watcher updates every minute: keep watcher-backed tabs fresh while they are open.
   setInterval(function () {
     if (!document.hidden && (state.tab === 'active' || state.tab === 'claimable' || Date.now() - claimFetched > POLL_MS)) loadClaimable(false);

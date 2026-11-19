@@ -7,7 +7,12 @@ The board auto-checks every 5 minutes while open, badges items that dropped sinc
 visit, pops a toast (and a `(3)` tab-title count) when new items land, and keeps its filters
 in the URL hash so a filtered view can be shared or bookmarked. Status tabs highlight items
 being claimed now, announced upcoming drops, drops waiting to start, items almost gone, and items
-that recently ended.
+that recently ended. A compact Live pulse connects the most useful signals across those feeds.
+
+The **Saved** tab is a browser-local shortlist. Star an item to retain it on that device; while
+the page is open it reports when a saved item starts claiming, becomes scarce, or ends. No account
+or server-side personal data is involved. The share control copies or opens the device share sheet
+for the current tab, search, and filters without including the Saved list.
 
 The Rolimon's page renders from a JSON blob embedded in its HTML (`var item_details = {...}`)
 and serves no CORS headers, so the scrape runs server-side in a Vercel function; the browser
