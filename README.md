@@ -33,7 +33,7 @@ api/x-feed.js      public snapshots captured by the X watcher for the website
 api/upcoming.js    structured upcoming drops inferred from trusted X posts
 api/event-monitor.js public event feed plus add/remove controls for monitored Roblox games
 api/event-watch.js scheduled Roblox game-event checker and Discord alerts
-api/claimable.js   items the watcher saw being claimed in the last 24h ("Still claimable" tab)
+api/claimable.js   unique items claimed in the last 24h ("Claimable now" tab)
 api/ended.js       Roblox-confirmed sold-out / off-sale items from the last 72h
 public/index.html  the board (static, fetches /api/items on open)
 vercel.json        function timeouts
@@ -70,20 +70,21 @@ Alerts (new messages, so they notify):
 - **🔥 Claiming reopened**: an item that was quiet for 24h+ got 5+ claims within 30 minutes. One
   person claiming a leftover copy doesn't count, which is what made the old "still claimable"
   alert so noisy.
-- **✅ Still claimable**: the first claim the watcher ever sees on an older item. Sent **once per
-  item**, always as one quiet list (no mention) with a link to the site's **Still claimable** tab
+- **✅ Claimable now**: the first claim the watcher ever sees on an older item. Sent **once per
+  item**, always as one quiet list (no mention) with a link to the site's **Claimable now** tab
 - **✨ New drop**: it's new since the last check (the alert says whether it's claimable yet)
 
 More than 4 of one kind in the same check arrive as a single list.
 
-**Still claimable tab** (`/#tab=claimable` on the site): every tracked item someone claimed on Roblox
-in the last 24 hours, sorted by claims in the last hour. It reads the watcher's saved data, so it
-only fills in once `/api/watch` is running. The alert links use the domain cron-job.org calls; set
+**Claimable now tab** (`/#tab=claimable` on the site): one card per tracked item claimed on Roblox
+in the last 24 hours. Items moving in roughly the last hour sort to the top by default, and the sort
+menu can instead show the most or least stock first. It reads the watcher's saved data, so it only
+fills in once `/api/watch` is running. The alert links use the domain cron-job.org calls; set
 `SITE_URL` if you want them to point at a different domain.
 
-**Claiming now and Recently ended tabs**: the watcher also supplies the live hourly activity view
-and keeps Roblox-confirmed sold-out or off-sale items for 72 hours. An ended item is removed from
-the archive if Roblox puts it back on sale. These tabs therefore also require `/api/watch` to run.
+**Recently ended tab**: the watcher keeps Roblox-confirmed sold-out or off-sale items for 72 hours.
+An ended item is removed from the archive if Roblox puts it back on sale. This tab therefore also
+requires `/api/watch` to run.
 
 **Live board**: one message the watcher edits in place every minute, listing what's being claimed
 right now (claims in the last hour) and what's waiting to start. Edits don't notify, so pin it and
@@ -171,10 +172,12 @@ When an item ID is present, the watcher checks Roblox's public catalog endpoint 
 as Roblox verified, live, ended, delayed, or still upcoming. Explicitly paid/Robux drops are excluded
 from this free-item board. `/api/upcoming` exposes only the sanitized schedule, and the site's
 **Upcoming** tab adds countdowns, source links, method/status filters, stock, codes, and game links.
-Repeated posts for the same item—or the same game and release time—are combined into one card with
-all source accounts attached; a game-only announcement is folded into its matching verified item.
-Finished items disappear immediately; a live item leaves Upcoming once
-claims begin or ten minutes after it first becomes live.
+Repeated posts for the same item—or the same game with matching time or announcement text—are
+combined into one card with all source accounts attached. This also handles mirrors that shift a
+relative phrase such as `tomorrow` onto an adjacent date, while distinct drops for the same game
+remain separate. A game-only announcement is folded into its matching verified item. Finished
+items disappear immediately; a live item leaves Upcoming once claims begin or ten minutes after it
+first becomes live, and a delayed announcement ages out six hours after its scheduled time.
 
 On each normal `/api/x-watch` run, the X webhook can also receive:
 

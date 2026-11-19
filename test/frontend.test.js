@@ -36,3 +36,12 @@ test('navigation uses the organized responsive sidebar shell', () => {
   assert.match(html, /id="view-title"/);
   assert.match(html, /@media \(max-width:1000px\)/);
 });
+
+test('claim activity uses one deduplicated view with stock sorting', () => {
+  assert.match(html, /data-v="claimable"[^>]*>Claimable now/);
+  assert.doesNotMatch(html, /data-v="active"/);
+  assert.doesNotMatch(html, /data-v="low"/);
+  assert.match(html, /\['stock', 'Most stock left'\]/);
+  assert.match(html, /\['low', 'Lowest stock first'\]/);
+  assert.match(html, /data-pulse-tab="claimable"/);
+});

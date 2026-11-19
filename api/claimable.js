@@ -1,5 +1,5 @@
-// Items the watcher has actually seen being claimed on Roblox recently, for the board's
-// "Still claimable" tab. Reads the watcher's saved state; never calls Roblox or Rolimon's itself.
+// Unique items the watcher has actually seen being claimed on Roblox recently, for the board's
+// "Claimable now" tab. Reads the watcher's keyed state; never calls Roblox or Rolimon's itself.
 import { redis, STATE_KEY, META_KEY } from './_lib/redis.js';
 
 const WINDOW_HOURS = 24;

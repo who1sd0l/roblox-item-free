@@ -418,10 +418,8 @@
       <button type="button" role="tab" data-v="saved" aria-selected="false" title="Items saved on this browser">Saved <span class="tc" id="tc-saved"></span></button>
       <button type="button" role="tab" data-v="upcoming" aria-selected="false" title="Free UGC announcements captured before release">Upcoming <span class="tc" id="tc-upcoming"></span></button>
       <span class="nav-label" role="presentation">Live tracking</span>
-      <button type="button" role="tab" data-v="active" aria-selected="false" title="Items with claims observed in roughly the last hour">Claiming now <span class="tc" id="tc-active"></span></button>
+      <button type="button" role="tab" data-v="claimable" aria-selected="false" title="Unique items claimed in the last 24 hours, with currently moving items first">Claimable now <span class="tc" id="tc-claim"></span></button>
       <button type="button" role="tab" data-v="waiting" aria-selected="false" title="Items whose stock has not started moving">Waiting <span class="tc" id="tc-waiting"></span></button>
-      <button type="button" role="tab" data-v="low" aria-selected="false" title="Started items with 10% or no more than 20 copies left">Almost gone <span class="tc" id="tc-low"></span></button>
-      <button type="button" role="tab" data-v="claimable" aria-selected="false" title="Items the watcher saw being claimed on Roblox in the last 24 hours">Still claimable <span class="tc" id="tc-claim"></span></button>
       <span class="nav-label" role="presentation">Sources &amp; history</span>
       <button type="button" role="tab" data-v="events" aria-selected="false" title="Events from Roblox games you choose to monitor">Game events <span class="tc" id="tc-events"></span></button>
       <button type="button" role="tab" data-v="x" aria-selected="false" title="Recent posts captured from the configured X accounts">X updates <span class="tc" id="tc-x"></span></button>
@@ -445,7 +443,7 @@
     </div>
     <section class="pulse" id="pulse" aria-label="Live pulse" hidden>
       <div class="pulse-head"><b>Live pulse</b><span>A quick read across the board</span></div>
-      <button class="pulse-item" id="pulse-active" type="button" data-pulse-tab="active" hidden><span class="pulse-kind">Moving now</span><span class="pulse-name"></span><span class="pulse-meta"></span></button>
+      <button class="pulse-item" id="pulse-active" type="button" data-pulse-tab="claimable" hidden><span class="pulse-kind">Moving now</span><span class="pulse-name"></span><span class="pulse-meta"></span></button>
       <button class="pulse-item" id="pulse-drop" type="button" data-pulse-tab="upcoming" hidden><span class="pulse-kind">Next UGC drop</span><span class="pulse-name"></span><span class="pulse-meta"></span></button>
       <button class="pulse-item" id="pulse-event" type="button" data-pulse-tab="events" hidden><span class="pulse-kind">Next game event</span><span class="pulse-name"></span><span class="pulse-meta"></span></button>
     </section>
@@ -537,26 +535,24 @@
   var RANGES = { day: 86400, week: 7 * 86400, month: 30 * 86400 };
   var VIEW_META = {
     all: ['Catalog', 'All in stock'], saved: ['Personal', 'Saved items'], upcoming: ['Schedule', 'Upcoming drops'],
-    active: ['Live stock', 'Claiming now'], waiting: ['Live stock', 'Waiting to start'], low: ['Live stock', 'Almost gone'],
-    claimable: ['Watcher', 'Still claimable'], events: ['Roblox', 'Game events'], x: ['Sources', 'X updates'], ended: ['Archive', 'Recently ended']
+    claimable: ['Live stock', 'Claimable now'], waiting: ['Live stock', 'Waiting to start'],
+    events: ['Roblox', 'Game events'], x: ['Sources', 'X updates'], ended: ['Archive', 'Recently ended']
   };
 
   // Each tab has its own sort menu; the first entry is that tab's default.
   var SORT_OPTS = {
-    all: [['new', 'Newest first'], ['hot', 'Hottest (claims / hr)'], ['stock', 'Most copies left'], ['pct', 'Most % left'], ['low', 'Almost gone']],
-    saved: [['active', 'Most active now'], ['low', 'Almost gone'], ['new', 'Newest first'], ['stock', 'Most copies left']],
+    all: [['new', 'Newest first'], ['hot', 'Hottest (claims / hr)'], ['stock', 'Most copies left'], ['pct', 'Most % left'], ['low', 'Lowest stock first']],
+    saved: [['active', 'Most active now'], ['low', 'Lowest stock first'], ['new', 'Newest first'], ['stock', 'Most copies left']],
     upcoming: [['next', 'Next release'], ['recent', 'Newest announcement'], ['stock', 'Largest stock'], ['account', 'Source account']],
-    active: [['active', 'Most active now'], ['recent', 'Last claimed'], ['low', 'Almost gone'], ['new', 'Newest first']],
     waiting: [['new', 'Newest first'], ['stock', 'Most copies'], ['pct', 'Most % left']],
-    low: [['low', 'Fewest copies'], ['leastpct', 'Lowest % left'], ['active', 'Most active now'], ['new', 'Newest first']],
-    claimable: [['active', 'Most active now'], ['recent', 'Last claimed'], ['new', 'Newest first'], ['stock', 'Most copies left'], ['low', 'Almost gone']],
+    claimable: [['active', 'Most active now'], ['stock', 'Most stock left'], ['low', 'Lowest stock first'], ['recent', 'Last claimed'], ['new', 'Newest first']],
     events: [['soon', 'Soonest first'], ['game', 'Game name'], ['ugc', 'UGC first']],
     x: [['new', 'Newest first'], ['account', 'Account name']],
     ended: [['ended', 'Ended most recently'], ['new', 'Newest item'], ['total', 'Largest drop']]
   };
 
   var rows = [], view = [], shown = PAGE, fetchedAt = null, nextPollAt = 0, lastSeen = 0, knownIds = null, pendingNew = 0, pendingSaved = 0, pendingSavedMessage = '';
-  // "Still claimable" tab: items the Discord watcher saw being claimed on Roblox (/api/claimable).
+  // Claimable tab: unique items the Discord watcher saw being claimed on Roblox (/api/claimable).
   var claimRows = [], claimInfo = null, claimErr = null, claimFetched = 0;
   var endedRows = [], endedInfo = null, endedErr = null, endedFetched = 0;
   var xRows = [], xInfo = null, xErr = null, xFetched = 0, xLoading = false;
@@ -696,10 +692,13 @@
   function readHash() {
     var p = new URLSearchParams(location.hash.slice(1));
     var tab = p.get('tab');
+    var legacyLow = tab === 'low';
+    if (tab === 'active' || tab === 'low') tab = 'claimable';
     state.tab = SORT_OPTS[tab] ? tab : 'all';
     state.range = DEFAULTS.range;
     state.min = DEFAULTS.min;
     state.sort = SORT_OPTS[state.tab][0][0];
+    if (legacyLow && !p.get('sort')) state.sort = 'low';
     state.reverse = p.get('dir') === 'reverse';
     state.onlyNew = false;
     if (RANGES[p.get('range')] || p.get('range') === 'year') state.range = p.get('range');
@@ -717,7 +716,7 @@
     var p = new URLSearchParams();
     if (state.tab !== 'all') p.set('tab', state.tab);
     ['range', 'min', 'q', 'type', 'method', 'dropStatus', 'game'].forEach(function (k) {
-      if (['saved', 'active', 'claimable', 'ended', 'x', 'upcoming', 'events'].indexOf(state.tab) !== -1 && (k === 'range' || k === 'min')) return;
+      if (['saved', 'claimable', 'ended', 'x', 'upcoming', 'events'].indexOf(state.tab) !== -1 && (k === 'range' || k === 'min')) return;
       if (['x', 'upcoming', 'events'].indexOf(state.tab) !== -1 && ['type', 'game'].indexOf(k) !== -1) return;
       if (state.tab !== 'upcoming' && ['method', 'dropStatus'].indexOf(k) !== -1) return;
       if (k === 'dropStatus') {
@@ -818,7 +817,7 @@
       render();
       return;
     }
-    var watcher = state.tab === 'active' || state.tab === 'claimable';
+    var watcher = state.tab === 'claimable';
     var ended = state.tab === 'ended';
     var personal = state.tab === 'saved';
     var source = personal ? savedRows() : watcher ? claimRows : ended ? endedRows : rows;
@@ -826,9 +825,7 @@
       if (!watcher && !ended && !personal && !inRange(r)) return false;
       if (!watcher && !ended && !personal && r.r < state.min) return false;
       if (!watcher && !ended && !personal && state.onlyNew && !isNew(r)) return false;
-      if (state.tab === 'active' && !(r.hour > 0)) return false;
       if (state.tab === 'waiting' && r.r !== r.t) return false;
-      if (state.tab === 'low' && !(r.r < r.t && (pctLeft(r) <= 0.1 || r.r <= 20))) return false;
       if (state.type && typeLabel(r.ty) !== state.type) return false;
       if (state.game && r.gi !== state.game) return false;
       if (q && (r.n + ' ' + r.g).toLowerCase().indexOf(q) === -1) return false;
@@ -843,7 +840,7 @@
   }
 
   function syncControls() {
-    var watcher = state.tab === 'active' || state.tab === 'claimable';
+    var watcher = state.tab === 'claimable';
     var ended = state.tab === 'ended';
     var xfeed = state.tab === 'x';
     var schedule = state.tab === 'upcoming';
@@ -871,13 +868,10 @@
     var note = $('tab-note');
     note.hidden = !(watcher || ended || xfeed || schedule || events || personal);
     if (personal) note.innerHTML = '<b>Your shortlist:</b> saved only on this browser · while this page is open, you will get a notice when a saved item starts claiming, becomes scarce, or ends.';
-    if (state.tab === 'active') note.innerHTML = claimInfo
-      ? '<b>Live activity:</b> 500+ copy items with claims observed in roughly the last hour · checked ' + rel(Date.parse(claimInfo.updatedAt) / 1000)
-      : 'Items whose Roblox stock moved in roughly the last hour.';
     if (state.tab === 'claimable') note.innerHTML = claimInfo
-      ? 'Items with <b>500+ copies</b> that were seen being claimed on Roblox in the last ' + claimInfo.windowHours +
-        ' hours, so you can still get them · checked ' + rel(Date.parse(claimInfo.updatedAt) / 1000)
-      : 'Items the alert watcher saw being claimed on Roblox in the last 24 hours.';
+      ? '<b>One card per item:</b> currently moving items first, followed by every 500+ copy item claimed in the last ' + claimInfo.windowHours +
+        ' hours · checked ' + rel(Date.parse(claimInfo.updatedAt) / 1000)
+      : 'Unique items the alert watcher saw being claimed on Roblox in the last 24 hours.';
     if (ended) note.innerHTML = endedInfo && endedInfo.ready
       ? '<b>500+ copy items</b> confirmed sold out or off sale by Roblox, retained for ' + endedInfo.windowHours + ' hours · checked ' + rel(Date.parse(endedInfo.updatedAt) / 1000)
       : 'The recent archive starts filling after the updated watcher runs.';
@@ -1101,7 +1095,7 @@
     if (r.endedAt) return r.reason === 'off-sale' ? 'Went off sale' : 'Sold out';
     if (r.hour > 0) return 'Claiming now · +' + compact(r.hour) + '/hr';
     if (r.r === r.t) return 'Waiting to start';
-    if (r.r < r.t && (pctLeft(r) <= 0.1 || r.r <= 20)) return 'Almost gone';
+    if (r.r < r.t && (pctLeft(r) <= 0.1 || r.r <= 20)) return 'Low stock';
     return 'In stock';
   }
 
@@ -1248,20 +1242,18 @@
       return;
     }
     countEl.textContent = nf(view.length) + ' item' + (view.length === 1 ? '' : 's');
-    if (!view.length && ['active', 'claimable', 'ended'].indexOf(state.tab) !== -1) {
+    if (!view.length && ['claimable', 'ended'].indexOf(state.tab) !== -1) {
       var any = state.q || state.type || state.game;
       var failed = state.tab === 'ended' ? endedErr : claimErr;
       var archiveWaiting = state.tab === 'ended' && endedInfo && !endedInfo.ready;
       var title = failed ? (state.tab === 'ended' ? 'The recent archive is not ready.' : 'The alert watcher hasn\'t reported yet.')
         : archiveWaiting ? 'The recent archive is waiting for the watcher.'
         : any ? 'Nothing matches.'
-        : state.tab === 'active' ? 'Nothing is moving right now.'
         : state.tab === 'ended' ? 'Nothing ended in the last 72 hours.'
         : 'Nothing claimed in the last 24 hours.';
       var help = failed ? (state.tab === 'ended' ? 'The watcher creates this archive when it observes an item end.' : 'This view fills in once /api/watch is running every minute.')
         : archiveWaiting ? 'It will initialize on the next successful /api/watch run.'
         : any ? ''
-        : state.tab === 'active' ? 'An item appears here when its Roblox stock moves during roughly the last hour.'
         : state.tab === 'ended' ? 'Sold-out and off-sale items will remain here temporarily.'
         : 'Items show up here as soon as someone claims a copy on Roblox.';
       board.innerHTML = '<div class="empty"><b>' +
@@ -1280,7 +1272,7 @@
     }
     if (!view.length) {
       var filtered = state.q || state.type || state.game || state.min > 1 || state.onlyNew;
-      var emptyTitle = state.tab === 'waiting' ? 'Nothing is waiting to start.' : state.tab === 'low' ? 'Nothing is almost gone.' : rows.length ? 'Nothing matches.' : 'No items yet.';
+      var emptyTitle = state.tab === 'waiting' ? 'Nothing is waiting to start.' : rows.length ? 'Nothing matches.' : 'No items yet.';
       board.innerHTML = '<div class="empty"><b>' + emptyTitle + '</b>' +
         (state.range === 'day' ? 'Nothing new in the last 24 hours with these filters.' : 'Try a wider date range or fewer filters.') +
         (filtered ? '<br><button class="more" type="button" id="reset">Clear filters</button>' : '') + '</div>';
@@ -1318,7 +1310,6 @@
     $('s-copies').textContent = compact(copies);
     $('tc-all').textContent = nf(rows.length);
     $('tc-waiting').textContent = nf(rows.filter(function (r) { return r.r === r.t; }).length);
-    $('tc-low').textContent = nf(rows.filter(function (r) { return r.r < r.t && (pctLeft(r) <= 0.1 || r.r <= 20); }).length);
     $('tc-saved').textContent = Object.keys(savedItems).length ? nf(Object.keys(savedItems).length) : '';
     $('s-new').textContent = lastSeen ? nf(fresh) : '—';
     $('s-new-l').textContent = lastSeen ? 'new since last visit' : 'first visit — welcome';
@@ -1465,9 +1456,8 @@
       .catch(function (err) { claimErr = err.message; })
       .then(function () {
         $('tc-claim').textContent = claimErr ? '' : nf(claimRows.length);
-        $('tc-active').textContent = claimErr ? '' : nf(claimRows.filter(function (r) { return r.hour > 0; }).length);
         updatePulse();
-        if (state.tab === 'claimable' || state.tab === 'active') apply(true);
+        if (state.tab === 'claimable') apply(true);
       });
   }
 
@@ -1598,7 +1588,7 @@
     state.reverse = false;
     state.onlyNew = false;
     apply();
-    if ((state.tab === 'active' || state.tab === 'claimable') && Date.now() - claimFetched > 60000) loadClaimable(false);
+    if (state.tab === 'claimable' && Date.now() - claimFetched > 60000) loadClaimable(false);
     if (state.tab === 'ended' && Date.now() - endedFetched > 60000) loadEnded(false);
     if (state.tab === 'x' && Date.now() - xFetched > 60000) loadX(false);
     if (state.tab === 'upcoming' && Date.now() - upcomingFetched > 60000) loadUpcoming(false);
@@ -1653,8 +1643,9 @@
     if (state.tab === 'saved') load(true, true).then(function () {
       return Promise.all([loadClaimable(true), loadEnded(true)]);
     }).then(function () { toast('Saved item data refreshed'); apply(true); });
-    else if (state.tab === 'active' || state.tab === 'claimable') loadClaimable(true).then(function () {
-      toast(claimErr ? 'Refresh failed: ' + claimErr : state.tab === 'active' ? nf(claimRows.filter(function (r) { return r.hour > 0; }).length) + ' items moving now' : nf(claimRows.length) + ' items still claimable');
+    else if (state.tab === 'claimable') loadClaimable(true).then(function () {
+      var moving = claimRows.filter(function (r) { return r.hour > 0; }).length;
+      toast(claimErr ? 'Refresh failed: ' + claimErr : nf(claimRows.length) + ' claimable items · ' + nf(moving) + ' moving now');
     });
     else if (state.tab === 'ended') loadEnded(true).then(function () { toast(endedErr ? 'Refresh failed: ' + endedErr : nf(endedRows.length) + ' recently ended items'); });
     else if (state.tab === 'x') loadX(true).then(function () { toast(xErr ? 'Refresh failed: ' + xErr : nf(xRows.length) + ' X updates loaded'); });
@@ -1820,7 +1811,7 @@
   setInterval(updatePulse, 1000);
   // The watcher updates every minute: keep watcher-backed tabs fresh while they are open.
   setInterval(function () {
-    if (!document.hidden && (state.tab === 'active' || state.tab === 'claimable' || Date.now() - claimFetched > POLL_MS)) loadClaimable(false);
+    if (!document.hidden && (state.tab === 'claimable' || Date.now() - claimFetched > POLL_MS)) loadClaimable(false);
     if (!document.hidden && state.tab === 'ended' && Date.now() - endedFetched > 60000) loadEnded(false);
     if (!document.hidden && state.tab === 'x' && Date.now() - xFetched > 60000) loadX(false);
     if (!document.hidden && state.tab === 'upcoming' && Date.now() - upcomingFetched > 60000) loadUpcoming(false);

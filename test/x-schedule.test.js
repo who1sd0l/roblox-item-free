@@ -90,6 +90,45 @@ test('combines duplicate event posts into one card with multiple sources', () =>
   assert.deepEqual(result.items[0].sources.map((source) => source.username).sort(), ['itznevn', 'xh0plugc']);
 });
 
+test('combines mirrored relative-time posts even when their parsed dates differ', () => {
+  const common = {
+    username: 'ugcnoticias_', image: null,
+    text: '@ArchUGC will be dropping a 100 stock UGC tmr at 3PM EST',
+    links: ['https://www.roblox.com/games/86073223609175'],
+  };
+  const result = mergeSchedule(null, [
+    { ...common, key: 'one', url: 'https://x.com/UgcNoticias_/status/1', createdAt: '2026-11-14T04:50:00.000Z' },
+    { ...common, key: 'two', url: 'https://x.com/UgcNoticias_/status/2', createdAt: '2026-11-14T15:50:00.000Z' },
+  ], new Map(), Date.parse('2026-11-14T16:00:00.000Z'));
+  assert.equal(result.items.length, 1);
+  assert.equal(result.items[0].scheduledAt, '2026-11-15T20:00:00.000Z');
+  assert.equal(result.items[0].sourceUrl, 'https://x.com/UgcNoticias_/status/2');
+});
+
+test('combines shortened untimed announcements for the same game', () => {
+  const common = {
+    username: 'xh0plugc', image: null, createdAt: '2026-11-18T12:00:00.000Z',
+    links: ['https://www.roblox.com/games/126259681759948/Turkey-Leg-Hunt'],
+  };
+  const result = mergeSchedule(null, [
+    { ...common, key: 'long', url: 'https://x.com/xh0plugc/status/1', text: 'Turkey Leg Hunt free UGC event. Collect ten turkeys to claim the reward.' },
+    { ...common, key: 'short', url: 'https://x.com/xh0plugc/status/2', text: 'Turkey Leg Hunt free UGC event.' },
+  ], new Map(), Date.parse('2026-11-18T13:00:00.000Z'));
+  assert.equal(result.items.length, 1);
+});
+
+test('keeps distinct timed drops for the same game separate', () => {
+  const common = {
+    username: 'itznevn', image: null, createdAt: '2026-11-19T12:00:00.000Z',
+    links: ['https://www.roblox.com/games/86073223609175'],
+  };
+  const result = mergeSchedule(null, [
+    { ...common, key: 'one', url: 'https://x.com/itznevn/status/1', text: '50 stock free UGC dropping today at 3PM EST.' },
+    { ...common, key: 'two', url: 'https://x.com/itznevn/status/2', text: '100 stock free UGC dropping today at 9PM EST.' },
+  ], new Map(), Date.parse('2026-11-19T13:00:00.000Z'));
+  assert.equal(result.items.length, 2);
+});
+
 test('folds a game-only announcement into its matching verified item card', () => {
   const common = {
     createdAt: '2026-11-12T03:00:00.000Z', image: null,
@@ -120,6 +159,8 @@ test('upcoming board removes claimed, finished, and ten-minute-old live items', 
   assert.equal(isUpcomingVisible({ status: 'live', currentStock: 99, totalStock: 100, liveSince: '2026-11-13T11:59:00.000Z' }, now), false);
   assert.equal(isUpcomingVisible({ status: 'live', currentStock: 100, totalStock: 100, liveSince: '2026-11-13T11:51:00.000Z' }, now), true);
   assert.equal(isUpcomingVisible({ status: 'live', currentStock: 100, totalStock: 100, liveSince: '2026-11-13T11:50:00.000Z' }, now), false);
+  assert.equal(isUpcomingVisible({ status: 'delayed', scheduledAt: '2026-11-13T07:01:00.000Z' }, now), true);
+  assert.equal(isUpcomingVisible({ status: 'delayed', scheduledAt: '2026-11-13T06:00:00.000Z' }, now), false);
 });
 
 test('excludes drops that Roblox confirms are paid', () => {

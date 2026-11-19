@@ -9,8 +9,8 @@
 //   - "Claiming started"   an untouched item (copies left = total) has started moving
 //   - "Claiming reopened"  an item quiet for DORMANT_HOURS got REOPEN_MIN+ claims within 30 minutes
 //                          (single stragglers trickling in don't count)
-//   - "Still claimable"    the first claim the watcher sees on an older item. Once per item, ever;
-//                          sent as one list linking to the site's "Still claimable" tab
+//   - "Claimable now"      the first claim the watcher sees on an older item. Once per item, ever;
+//                          sent as one list linking to the site's unified claimable tab
 //   - "New drop"           an item that wasn't tracked last run
 // Live board: one message that is edited in place every run (edits don't notify), listing what is
 // being claimed right now and what is waiting to start. Pin it in the channel.
@@ -44,7 +44,7 @@ const COLORS = { started: 0x22c55e, reopened: 0xf59e0b, claimable: 0x14b8a6, new
 const TITLES = {
   started: '🚨 Claiming started',
   reopened: '🔥 Claiming reopened',
-  claimable: '✅ Still claimable',
+  claimable: '✅ Claimable now',
   new: '✨ New drop',
 };
 
@@ -131,10 +131,10 @@ async function sendAlerts(events, claimableUrl) {
   for (const [kind, ping] of [['started', true], ['reopened', true], ['claimable', false], ['new', false]]) {
     const group = events.filter((e) => e.kind === kind);
     if (!group.length) continue;
-    // "Still claimable" is low-priority catch-up info: always one quiet list with a link to the site.
+    // Claimable catch-up info is low priority: always one quiet list with a link to the site.
     if (kind === 'claimable') {
       const embed = list(kind, group);
-      if (claimableUrl) embed.description += `\n\n**[See every still-claimable item →](${claimableUrl})**`;
+      if (claimableUrl) embed.description += `\n\n**[See all claimable items →](${claimableUrl})**`;
       await discord({ embeds: [embed] });
       continue;
     }
@@ -176,9 +176,9 @@ function boardPayload(rows, now, source, claimableUrl) {
       },
       {
         color: COLORS.board,
-        description: `Tracking **${rows.length}** items · ${lowest.length} almost gone · ` +
+        description: `Tracking **${rows.length}** items · ${lowest.length} low stock · ` +
           `stock from ${source} · updated <t:${now}:R>` +
-          (claimableUrl ? `\n**[All still-claimable items →](${claimableUrl})**` : ''),
+          (claimableUrl ? `\n**[All claimable items →](${claimableUrl})**` : ''),
       },
     ],
   };
@@ -321,7 +321,7 @@ export default async function handler(req, res) {
             cur.w = w; // still waiting to see if this is real activity or a straggler
           }
         }
-        // First claim ever seen on an item nothing else announced: one quiet "still claimable".
+        // First claim ever seen on an item nothing else announced: one quiet claimable alert.
         if (moved > 0 && !cur.c && events.length === before) {
           events.push({ kind: 'claimable', item, claimed: moved });
         }
@@ -329,7 +329,7 @@ export default async function handler(req, res) {
         // Only brand-new additions; not old items that crossed MIN_TOTAL or came back into stock.
         events.push({ kind: 'new', item });
       }
-      // Anything announced as claiming counts, so it never gets a separate "still claimable".
+      // Anything announced as claiming counts, so it never gets a separate claimable alert.
       if (events.length > before && item.r < item.t) {
         cur.c = 1;
         next.announced[item.i] = 1;

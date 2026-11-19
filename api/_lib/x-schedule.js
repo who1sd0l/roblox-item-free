@@ -5,6 +5,7 @@ import { createHash } from 'node:crypto';
 
 const X_EPOCH = 1288834974657n;
 const DAY = 86400000;
+const HOUR = 3600000;
 const KEEP_MS = 21 * DAY;
 
 const TZ = {
@@ -69,6 +70,65 @@ function canonicalId(entry) {
     .replace(/\s+/g, ' ')
     .trim();
   return `event:${digest(`${entry.scheduledAt || ''}|${gameId || ''}|${normalized}`)}`;
+}
+
+function normalizedEventText(entry, titleOnly = false) {
+  return String(titleOnly ? entry.title : entry.text || entry.title || '')
+    .toLowerCase()
+    .replace(/https?:\/\/\S+/g, '')
+    .replace(/@[a-z0-9_]+/g, '')
+    .replace(/[^a-z0-9áéíóúñ]+/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function sameGameEvent(a, b) {
+  if (a.itemId || b.itemId || gameIdFor(a) !== gameIdFor(b) || !gameIdFor(a)) return false;
+  const createdGap = Math.abs(Date.parse(a.createdAt || 0) - Date.parse(b.createdAt || 0));
+  const at = Date.parse(a.scheduledAt || ''), bt = Date.parse(b.scheduledAt || '');
+  if (Number.isFinite(at) && Number.isFinite(bt) && Math.abs(at - bt) <= 15 * 60000) return true;
+
+  const aText = normalizedEventText(a), bText = normalizedEventText(b);
+  // Reader mirrors sometimes assign a different post time to the same quoted announcement,
+  // which moves relative words such as "tomorrow" onto adjacent dates.
+  if (aText.length >= 12 && aText === bText && createdGap <= 18 * HOUR) return true;
+
+  const aTitle = normalizedEventText(a, true), bTitle = normalizedEventText(b, true);
+  const shorter = aTitle.length <= bTitle.length ? aTitle : bTitle;
+  const longer = aTitle.length <= bTitle.length ? bTitle : aTitle;
+  return (!Number.isFinite(at) || !Number.isFinite(bt)) && createdGap <= 3 * DAY && shorter.length >= 12 && longer.includes(shorter);
+}
+
+function collapseDuplicateEvents(entries) {
+  const groups = [];
+  const events = [...entries.values()].filter((entry) => !entry.itemId && gameIdFor(entry))
+    .sort((a, b) => Date.parse(b.createdAt || 0) - Date.parse(a.createdAt || 0));
+  for (const event of events) {
+    const group = groups.find((members) => members.some((member) => sameGameEvent(member, event)));
+    if (group) group.push(event);
+    else groups.push([event]);
+  }
+  if (!groups.some((group) => group.length > 1)) return;
+
+  for (const [key, entry] of entries) if (!entry.itemId && gameIdFor(entry)) entries.delete(key);
+  for (const members of groups) {
+    const primary = { ...members[0] };
+    for (const duplicate of members.slice(1)) {
+      primary.sources = mergeSources(primary.sources || [], duplicate.sources || [], [sourceFor(duplicate)]);
+      primary.links = unique([...(primary.links || []), ...(duplicate.links || [])]);
+      primary.gameUrls = unique([...(primary.gameUrls || []), ...(duplicate.gameUrls || [])]);
+      primary.reminders = { ...(duplicate.reminders || {}), ...(primary.reminders || {}) };
+      for (const field of ['scheduledAt', 'timezone', 'image', 'method', 'expectedStock', 'limitPerUser', 'code', 'region']) {
+        if (primary[field] === null || primary[field] === undefined || primary[field] === '') primary[field] = duplicate[field];
+      }
+    }
+    primary.id = canonicalId(primary);
+    const existing = entries.get(primary.id);
+    if (existing) {
+      existing.sources = mergeSources(existing.sources || [], primary.sources || []);
+      existing.reminders = { ...(primary.reminders || {}), ...(existing.reminders || {}) };
+    } else entries.set(primary.id, primary);
+  }
 }
 
 function combineRelatedEntries(entries) {
@@ -325,6 +385,7 @@ export function mergeSchedule(previous, posts, catalog = new Map(), now = Date.n
     }
   }
   combineRelatedEntries(entries);
+  collapseDuplicateEvents(entries);
   const items = [...entries.values()].map((entry) => {
     let detail = entry.itemId ? catalog.get(String(entry.itemId)) : null;
     if (!detail && preserveCatalog && entry.verified) detail = {
@@ -361,6 +422,10 @@ export function mergeSchedule(previous, posts, catalog = new Map(), now = Date.n
 
 export function isUpcomingVisible(item, now = Date.now()) {
   if (item.isPaid || ['ended', 'cancelled'].includes(item.status)) return false;
+  if (item.status === 'delayed') {
+    const scheduled = Date.parse(item.scheduledAt || '');
+    return Number.isFinite(scheduled) && now - scheduled < 6 * HOUR;
+  }
   if (item.status !== 'live') return true;
   const current = item.currentStock;
   const total = item.totalStock;
