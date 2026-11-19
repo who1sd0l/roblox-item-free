@@ -249,6 +249,35 @@
   .drop-sources{display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap;margin-left:auto}
   .drop-source{color:var(--ink-3)!important}
 
+  /* ---------- monitored Roblox events ---------- */
+  .event-admin{display:grid;grid-template-columns:minmax(220px,1fr) minmax(150px,240px) auto;gap:8px;max-width:1180px;margin:0 auto 9px;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--panel)}
+  .event-admin label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--ink-3)}
+  .event-admin input{width:100%;height:36px;border:1px solid var(--line);border-radius:6px;background:var(--panel-2);color:var(--ink);font:inherit;font-size:14px;padding:7px 10px;outline:none}
+  .event-admin input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  .event-admin button{align-self:end;height:36px;border:0;border-radius:6px;background:var(--accent);color:var(--accent-ink);font-size:14px;font-weight:650;padding:0 15px;cursor:pointer}
+  .event-admin button[disabled]{opacity:.55;cursor:wait}
+  .event-admin-status{grid-column:1/-1;margin:0;font-size:13px;color:var(--ink-3)}
+  .event-admin-status.err{color:var(--crit)}
+  .event-games{display:flex;gap:6px;flex-wrap:wrap;max-width:1180px;margin:0 auto 9px}
+  .event-game-chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:6px;background:var(--panel);padding:4px 5px 4px 8px;font-size:13px;color:var(--ink-2)}
+  .event-game-chip button{display:grid;place-items:center;width:22px;height:22px;border:0;border-radius:4px;background:transparent;color:var(--ink-3);cursor:pointer;font-size:17px;line-height:1}
+  .event-game-chip button:hover{background:var(--panel-2);color:var(--crit)}
+  .board.events{display:flex;flex-direction:column;gap:10px;max-width:900px;margin:18px auto 0}
+  .event-card{display:grid;grid-template-columns:54px minmax(0,1fr) auto;gap:13px;align-items:start;padding:14px 15px;border:1px solid var(--line);border-radius:8px;background:var(--panel)}
+  .event-card:hover{border-color:var(--line-2)}
+  .event-icon{width:54px;height:54px;border-radius:8px;object-fit:cover;background:var(--panel-2)}
+  .event-title{margin:0;font-size:15px;line-height:1.3}
+  .event-title a{color:var(--ink);text-decoration:none}
+  .event-title a:hover{color:var(--accent)}
+  .event-game{margin:3px 0 0;font-size:13px;color:var(--ink-3)}
+  .event-desc{margin:7px 0 0;font-size:14px;line-height:1.45;color:var(--ink-2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .event-tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
+  .event-time{min-width:170px;text-align:right;font-size:13px;color:var(--ink-3)}
+  .event-countdown{display:block;font-family:ui-monospace,"SFMono-Regular",Consolas,monospace;font-size:14px;font-weight:650;color:var(--ink)}
+  .event-time time{display:block;margin-top:2px}
+  .event-links{display:flex;justify-content:flex-end;gap:9px;margin-top:8px}
+  .event-links a{font-size:13px;font-weight:600;color:var(--accent);text-decoration:none}
+
   /* ---------- states ---------- */
   .sk{background:linear-gradient(90deg,var(--panel-2) 0%,var(--panel-3) 50%,var(--panel-2) 100%);background-size:200% 100%;animation:sh 1.3s linear infinite;border-radius:8px}
   @keyframes sh{to{background-position:-200% 0}}
@@ -306,6 +335,12 @@
     .drop-img{width:78px;height:78px}
     .drop-text,.drop-meta{padding-left:13px;padding-right:13px}
     .drop-actions{padding:10px 13px}
+    .event-admin{grid-template-columns:1fr}
+    .event-admin-status{grid-column:1}
+    .event-card{grid-template-columns:44px minmax(0,1fr);padding:12px}
+    .event-icon{width:44px;height:44px}
+    .event-time{grid-column:1/-1;text-align:left;min-width:0;padding-left:57px}
+    .event-links{justify-content:flex-start}
     .count{margin-left:0}
     .live .ltxt-long{display:none}
     .detail-content{padding:0 16px 18px}
@@ -348,10 +383,18 @@
       <button type="button" role="tab" data-v="waiting" aria-selected="false" title="Items whose stock has not started moving">Waiting <span class="tc" id="tc-waiting"></span></button>
       <button type="button" role="tab" data-v="low" aria-selected="false" title="Started items with 10% or no more than 20 copies left">Almost gone <span class="tc" id="tc-low"></span></button>
       <button type="button" role="tab" data-v="claimable" aria-selected="false" title="Items the watcher saw being claimed on Roblox in the last 24 hours">Still claimable <span class="tc" id="tc-claim"></span></button>
+      <button type="button" role="tab" data-v="events" aria-selected="false" title="Events from Roblox games you choose to monitor">Game events <span class="tc" id="tc-events"></span></button>
       <button type="button" role="tab" data-v="x" aria-selected="false" title="Recent posts captured from the configured X accounts">X updates <span class="tc" id="tc-x"></span></button>
       <button type="button" role="tab" data-v="ended" aria-selected="false" title="Items that sold out or went off sale in the last 72 hours">Recently ended <span class="tc" id="tc-ended"></span></button>
     </div>
     <p class="note" id="tab-note" hidden></p>
+    <form class="event-admin" id="event-admin" autocomplete="off" hidden>
+      <label>Roblox game URL<input type="url" id="event-url" inputmode="url" placeholder="https://www.roblox.com/games/…" required></label>
+      <label>Watcher secret<input type="password" id="event-secret" placeholder="EVENT_WATCH_SECRET" required autocomplete="off"></label>
+      <button type="submit" id="event-add">Add monitor</button>
+      <p class="event-admin-status" id="event-admin-status">The secret is sent only to this site's protected API and is never stored by this website.</p>
+    </form>
+    <div class="event-games" id="event-games" hidden></div>
     <div class="crow">
       <label class="search">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
@@ -400,7 +443,7 @@
   <button class="more" id="more" type="button" hidden>Show more</button>
 
   <footer>
-    <p>Items come from <a href="https://www.rolimons.com/free-roblox-limiteds" target="_blank" rel="noopener">Rolimon's</a> and are re-checked while the page is open. X updates are public snapshots from the configured accounts. Code-gated shops (Flex UGC Codes, UGC Limited Codes, My Avatar!) are hidden.</p>
+    <p>Items come from <a href="https://www.rolimons.com/free-roblox-limiteds" target="_blank" rel="noopener">Rolimon's</a> and are re-checked while the page is open. X updates and Roblox game events are public snapshots. Code-gated shops (Flex UGC Codes, UGC Limited Codes, My Avatar!) are hidden.</p>
     <p>Not affiliated with Roblox, Rolimon's, or X.</p>
   </footer>
 </div>
@@ -431,6 +474,7 @@
     waiting: [['new', 'Newest first'], ['stock', 'Most copies'], ['pct', 'Most % left']],
     low: [['low', 'Fewest copies'], ['leastpct', 'Lowest % left'], ['active', 'Most active now'], ['new', 'Newest first']],
     claimable: [['active', 'Most active now'], ['recent', 'Last claimed'], ['new', 'Newest first'], ['stock', 'Most copies left'], ['low', 'Almost gone']],
+    events: [['soon', 'Soonest first'], ['game', 'Game name'], ['ugc', 'UGC first']],
     x: [['new', 'Newest first'], ['account', 'Account name']],
     ended: [['ended', 'Ended most recently'], ['new', 'Newest item'], ['total', 'Largest drop']]
   };
@@ -441,6 +485,7 @@
   var endedRows = [], endedInfo = null, endedErr = null, endedFetched = 0;
   var xRows = [], xInfo = null, xErr = null, xFetched = 0, xLoading = false;
   var upcomingRows = [], upcomingInfo = null, upcomingErr = null, upcomingFetched = 0, upcomingLoading = false;
+  var eventRows = [], eventInfo = null, eventErr = null, eventFetched = 0, eventLoading = false;
   var state = { tab: 'all', range: 'month', min: 1, q: '', sort: 'new', reverse: false, type: '', method: '', dropStatus: 'any', game: '', view: 'grid', onlyNew: false };
 
   var $ = function (id) { return document.getElementById(id); };
@@ -502,8 +547,8 @@
     var p = new URLSearchParams();
     if (state.tab !== 'all') p.set('tab', state.tab);
     ['range', 'min', 'q', 'type', 'method', 'dropStatus', 'game'].forEach(function (k) {
-      if (['active', 'claimable', 'ended', 'x', 'upcoming'].indexOf(state.tab) !== -1 && (k === 'range' || k === 'min')) return;
-      if (['x', 'upcoming'].indexOf(state.tab) !== -1 && ['type', 'game'].indexOf(k) !== -1) return;
+      if (['active', 'claimable', 'ended', 'x', 'upcoming', 'events'].indexOf(state.tab) !== -1 && (k === 'range' || k === 'min')) return;
+      if (['x', 'upcoming', 'events'].indexOf(state.tab) !== -1 && ['type', 'game'].indexOf(k) !== -1) return;
       if (state.tab !== 'upcoming' && ['method', 'dropStatus'].indexOf(k) !== -1) return;
       if (k === 'dropStatus') {
         if (state.dropStatus !== 'any') p.set('status', state.dropStatus);
@@ -533,6 +578,32 @@
 
   function apply(keepPage) {
     var q = state.q.trim().toLowerCase();
+    if (state.tab === 'events') {
+      var eventGames = new Map(((eventInfo && eventInfo.games) || []).map(function (game) { return [game.universeId, game]; }));
+      view = eventRows.filter(function (event) {
+        var game = eventGames.get(event.universeId);
+        return !q || (event.title + ' ' + event.subtitle + ' ' + event.description + ' ' + (game ? game.name + ' ' + game.creator : '')).toLowerCase().indexOf(q) !== -1;
+      });
+      var eventSort = state.sort === 'game'
+        ? function (a, b) {
+            var ag = eventGames.get(a.universeId), bg = eventGames.get(b.universeId);
+            return (ag ? ag.name : '').localeCompare(bg ? bg.name : '') || Date.parse(a.start) - Date.parse(b.start);
+          }
+        : state.sort === 'ugc'
+        ? function (a, b) { return Number(b.ugc) - Number(a.ugc) || Date.parse(a.start) - Date.parse(b.start); }
+        : function (a, b) {
+            var now = Date.now();
+            var ar = Date.parse(a.start) <= now && Date.parse(a.end) > now ? 0 : 1;
+            var br = Date.parse(b.start) <= now && Date.parse(b.end) > now ? 0 : 1;
+            return ar - br || Date.parse(a.start) - Date.parse(b.start);
+          };
+      view.sort(function (a, b) { return state.reverse ? -eventSort(a, b) : eventSort(a, b); });
+      if (!keepPage) shown = PAGE;
+      syncControls();
+      writeHash();
+      render();
+      return;
+    }
     if (state.tab === 'upcoming') {
       view = upcomingRows.filter(function (drop) {
         if (state.method && drop.method !== state.method) return false;
@@ -605,19 +676,22 @@
     var ended = state.tab === 'ended';
     var xfeed = state.tab === 'x';
     var schedule = state.tab === 'upcoming';
+    var events = state.tab === 'events';
     Array.prototype.forEach.call($('tabs').querySelectorAll('button'), function (b) {
       b.setAttribute('aria-selected', String(b.getAttribute('data-v') === state.tab));
     });
-    $('range').hidden = watcher || ended || xfeed || schedule;
-    $('min').hidden = watcher || ended || xfeed || schedule;
-    $('type-label').hidden = xfeed || schedule;
-    $('type-wrap').hidden = xfeed || schedule;
+    $('range').hidden = watcher || ended || xfeed || schedule || events;
+    $('min').hidden = watcher || ended || xfeed || schedule || events;
+    $('type-label').hidden = xfeed || schedule || events;
+    $('type-wrap').hidden = xfeed || schedule || events;
     $('method-label').hidden = !schedule;
     $('method-wrap').hidden = !schedule;
     $('drop-status').hidden = !schedule;
-    $('view').hidden = xfeed || schedule;
+    $('view').hidden = xfeed || schedule || events;
+    $('event-admin').hidden = !events;
+    $('event-games').hidden = !events || !eventInfo || !eventInfo.games || !eventInfo.games.length;
     var note = $('tab-note');
-    note.hidden = !(watcher || ended || xfeed || schedule);
+    note.hidden = !(watcher || ended || xfeed || schedule || events);
     if (state.tab === 'active') note.innerHTML = claimInfo
       ? '<b>Live activity:</b> 500+ copy items with claims observed in roughly the last hour · checked ' + rel(Date.parse(claimInfo.updatedAt) / 1000)
       : 'Items whose Roblox stock moved in roughly the last hour.';
@@ -646,9 +720,22 @@
       }).join('');
       methodEl.value = state.method;
     }
-    qEl.placeholder = schedule ? 'Search upcoming drops' : xfeed ? 'Search X updates' : 'Search items or games';
-    qEl.setAttribute('aria-label', schedule ? 'Search upcoming drops' : xfeed ? 'Search X updates' : 'Search items and games');
-    refreshEl.title = schedule ? 'Refresh upcoming drops' : xfeed ? 'Refresh X updates' : watcher ? 'Refresh watcher data' : ended ? 'Refresh recent archive' : 'Fetch fresh data from Rolimon\'s';
+    if (events) {
+      var games = eventInfo && eventInfo.games ? eventInfo.games : [];
+      var failed = eventInfo && eventInfo.failed ? eventInfo.failed.length : 0;
+      note.innerHTML = eventInfo && eventInfo.ready
+        ? '<b>Monitored games:</b> ' + games.length + ' · alerts use the X Discord webhook' +
+          (eventInfo.updatedAt ? ' · checked ' + rel(Date.parse(eventInfo.updatedAt) / 1000) : '') +
+          (failed ? ' · ' + failed + ' check' + (failed === 1 ? '' : 's') + ' failed' : '')
+        : 'Add a Roblox game below. Existing events are used as a baseline, then Discord alerts fire for new, starting-soon, and live events.';
+      $('event-games').innerHTML = games.map(function (game) {
+        return '<span class="event-game-chip">' + esc(game.name) +
+          '<button type="button" data-remove-event-game="' + esc(game.placeId) + '" aria-label="Stop monitoring ' + esc(game.name) + '" title="Stop monitoring">&times;</button></span>';
+      }).join('');
+    }
+    qEl.placeholder = events ? 'Search monitored events' : schedule ? 'Search upcoming drops' : xfeed ? 'Search X updates' : 'Search items or games';
+    qEl.setAttribute('aria-label', events ? 'Search monitored events' : schedule ? 'Search upcoming drops' : xfeed ? 'Search X updates' : 'Search items and games');
+    refreshEl.title = events ? 'Refresh monitored events' : schedule ? 'Refresh upcoming drops' : xfeed ? 'Refresh X updates' : watcher ? 'Refresh watcher data' : ended ? 'Refresh recent archive' : 'Fetch fresh data from Rolimon\'s';
     if (sortEl.getAttribute('data-tab') !== state.tab) {
       sortEl.innerHTML = SORT_OPTS[state.tab].map(function (o) { return '<option value="' + o[0] + '">' + o[1] + '</option>'; }).join('');
       sortEl.setAttribute('data-tab', state.tab);
@@ -665,12 +752,12 @@
     if (qEl.value !== state.q) qEl.value = state.q;
     $('s-new-btn').setAttribute('aria-pressed', String(state.onlyNew));
     var chip = $('gamechip');
-    if (state.game && !xfeed && !schedule) {
+    if (state.game && !xfeed && !schedule && !events) {
       var hit = rows.concat(claimRows, endedRows).find(function (r) { return r.gi === state.game; });
       $('gamechip-t').textContent = 'Game: ' + (hit ? hit.g : state.game);
       chip.hidden = false;
     } else chip.hidden = true;
-    board.className = schedule ? 'board schedule' : xfeed ? 'board xfeed' : 'board ' + state.view;
+    board.className = events ? 'board events' : schedule ? 'board schedule' : xfeed ? 'board xfeed' : 'board ' + state.view;
   }
 
   /* ---------- rendering ---------- */
@@ -863,7 +950,75 @@
     detailEl.showModal();
   }
 
+  function eventGame(event) {
+    return eventInfo && eventInfo.games ? eventInfo.games.find(function (game) { return game.universeId === event.universeId; }) : null;
+  }
+  function eventCategory(value) {
+    return String(value || '').replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, function (c) { return c.toUpperCase(); });
+  }
+  function duration(ms) {
+    var seconds = Math.max(0, Math.floor(ms / 1000));
+    var days = Math.floor(seconds / 86400);
+    var hours = Math.floor((seconds % 86400) / 3600);
+    var mins = Math.floor((seconds % 3600) / 60);
+    var secs = seconds % 60;
+    if (days) return days + 'd ' + hours + 'h';
+    if (hours) return hours + 'h ' + mins + 'm';
+    return mins + 'm ' + String(secs).padStart(2, '0') + 's';
+  }
+  function eventHTML(event) {
+    var game = eventGame(event) || { name: 'Monitored game', icon: null };
+    var start = Date.parse(event.start), end = Date.parse(event.end), now = Date.now();
+    var live = start <= now && end > now;
+    var tags = (event.categories || []).map(function (category) { return '<span class="b">' + esc(eventCategory(category)) + '</span>'; }).join('');
+    if (event.ugc) tags = '<span class="b age fresh">UGC signal</span>' + tags;
+    return '<article class="event-card">' +
+      (game.icon ? '<img class="event-icon" src="' + esc(game.icon) + '" alt="" loading="lazy">' : '<div class="event-icon"></div>') +
+      '<div><h3 class="event-title"><a href="https://www.roblox.com/events/' + esc(event.id) + '" target="_blank" rel="noopener">' + esc(event.title) + '</a></h3>' +
+        '<p class="event-game">' + esc(game.name) + (game.creator ? ' · by ' + esc(game.creator) : '') + '</p>' +
+        (event.subtitle ? '<p class="event-desc">' + esc(event.subtitle) + '</p>' : '') +
+        (event.description ? '<p class="event-desc">' + esc(event.description) + '</p>' : '') +
+        (tags ? '<div class="event-tags">' + tags + '</div>' : '') +
+      '</div>' +
+      '<div class="event-time" data-event-start="' + start + '" data-event-end="' + end + '">' +
+        '<span class="event-countdown">' + (live ? 'Live · ends ' + duration(end - now) : 'Starts in ' + duration(start - now)) + '</span>' +
+        '<time datetime="' + esc(event.start) + '">' + esc(new Date(start).toLocaleString('en-MY', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kuala_Lumpur' })) + ' MYT</time>' +
+        '<div class="event-links"><a href="https://www.roblox.com/events/' + esc(event.id) + '" target="_blank" rel="noopener">Event</a>' +
+          '<a href="https://www.roblox.com/games/' + esc(event.placeId) + '" target="_blank" rel="noopener">Play</a></div>' +
+      '</div></article>';
+  }
+  function tickEventCountdowns() {
+    Array.prototype.forEach.call(board.querySelectorAll('[data-event-start]'), function (node) {
+      var start = +node.getAttribute('data-event-start'), end = +node.getAttribute('data-event-end'), now = Date.now();
+      var target = node.querySelector('.event-countdown');
+      if (!target) return;
+      target.textContent = start <= now && end > now ? 'Live · ends ' + duration(end - now) : start > now ? 'Starts in ' + duration(start - now) : 'Event ended';
+    });
+  }
+
   function render() {
+    if (state.tab === 'events') {
+      countEl.textContent = nf(view.length) + ' event' + (view.length === 1 ? '' : 's');
+      if (!view.length) {
+        var eventFiltered = Boolean(state.q);
+        var eventGames = eventInfo && eventInfo.games ? eventInfo.games.length : 0;
+        var eventTitle = eventErr ? 'Could not load monitored events.' : eventFiltered ? 'Nothing matches.' : eventGames ? 'No current or upcoming events.' : 'No games monitored yet.';
+        var eventHelp = eventErr ? esc(eventErr) : eventFiltered ? '' : eventGames ? 'The watcher will keep checking these games for new events.' : 'Paste a Roblox game URL above to start monitoring it.';
+        board.innerHTML = '<div class="empty"><b>' + eventTitle + '</b>' + eventHelp +
+          (eventFiltered ? '<br><button class="more" type="button" id="reset-events">Clear search</button>' : '') +
+          (eventErr ? '<br><button class="more" type="button" id="event-retry">Try again</button>' : '') + '</div>';
+        moreEl.hidden = true;
+        return;
+      }
+      var eventHtml = [], eventCount = Math.min(shown, view.length);
+      for (var ei = 0; ei < eventCount; ei++) eventHtml.push(eventHTML(view[ei]));
+      board.innerHTML = eventHtml.join('');
+      tickEventCountdowns();
+      var eventLeft = view.length - shown;
+      moreEl.hidden = eventLeft <= 0;
+      moreEl.textContent = 'Show ' + nf(Math.min(PAGE, eventLeft)) + ' more  ·  ' + nf(eventLeft) + ' left';
+      return;
+    }
     if (state.tab === 'upcoming') {
       countEl.textContent = nf(view.length) + ' drop' + (view.length === 1 ? '' : 's');
       if (!view.length) {
@@ -1011,7 +1166,7 @@
     if (loading) return;
     loading = true;
     refreshEl.disabled = true;
-    if (!rows.length && !silent && state.tab !== 'x' && state.tab !== 'upcoming') skeleton();
+    if (!rows.length && !silent && state.tab !== 'x' && state.tab !== 'upcoming' && state.tab !== 'events') skeleton();
     fetch('/api/items' + (bust ? '?t=' + Date.now() : ''))
       .then(function (r) {
         if (!r.ok) return r.json().catch(function () { return {}; }).then(function (j) { throw new Error(j.error || 'HTTP ' + r.status); });
@@ -1044,12 +1199,12 @@
       .catch(function (err) {
         liveEl.className = 'live err';
         stampEl.textContent = 'offline';
-        if (!rows.length && state.tab !== 'x' && state.tab !== 'upcoming') {
+        if (!rows.length && state.tab !== 'x' && state.tab !== 'upcoming' && state.tab !== 'events') {
           board.className = 'board grid';
           board.innerHTML = '<div class="empty"><b>Could not reach the feed.</b>' + esc(err.message) +
             '<br><button class="more" type="button" id="retry">Try again</button></div>';
           countEl.textContent = '';
-        } else if (state.tab !== 'x' && state.tab !== 'upcoming') toast('Refresh failed: ' + err.message);
+        } else if (state.tab !== 'x' && state.tab !== 'upcoming' && state.tab !== 'events') toast('Refresh failed: ' + err.message);
       })
       .then(function () {
         loading = false;
@@ -1145,6 +1300,47 @@
       });
   }
 
+  function loadEvents(bust) {
+    if (eventLoading) return Promise.resolve();
+    eventLoading = true;
+    eventFetched = Date.now();
+    return fetch('/api/event-monitor' + (bust ? '?t=' + Date.now() : ''))
+      .then(function (r) {
+        return r.json().catch(function () { return {}; }).then(function (j) {
+          if (!r.ok) throw new Error(j.error || 'HTTP ' + r.status);
+          return j;
+        });
+      })
+      .then(function (d) { eventRows = d.events || []; eventInfo = d; eventErr = null; })
+      .catch(function (err) { eventErr = err.message; })
+      .then(function () {
+        eventLoading = false;
+        $('tc-events').textContent = eventErr ? '' : nf(eventRows.length);
+        if (state.tab === 'events') apply(true);
+      });
+  }
+
+  function setEventAdminStatus(message, failed) {
+    var node = $('event-admin-status');
+    node.textContent = message;
+    node.classList.toggle('err', Boolean(failed));
+  }
+
+  function eventAdminRequest(method, body) {
+    var secret = $('event-secret').value.trim();
+    if (!secret) return Promise.reject(new Error('Enter your watcher secret first'));
+    return fetch('/api/event-monitor', {
+      method: method,
+      headers: { 'content-type': 'application/json', authorization: 'Bearer ' + secret },
+      body: JSON.stringify(body),
+    }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (j) {
+        if (!r.ok) throw new Error(j.error || 'HTTP ' + r.status);
+        return j;
+      });
+    });
+  }
+
   /* ---------- events ---------- */
   function segClick(id, fn) {
     $(id).addEventListener('click', function (e) {
@@ -1164,6 +1360,7 @@
     if (state.tab === 'ended' && Date.now() - endedFetched > 60000) loadEnded(false);
     if (state.tab === 'x' && Date.now() - xFetched > 60000) loadX(false);
     if (state.tab === 'upcoming' && Date.now() - upcomingFetched > 60000) loadUpcoming(false);
+    if (state.tab === 'events' && Date.now() - eventFetched > 60000) loadEvents(false);
   });
   segClick('range', function (v) { state.range = v; apply(); });
   segClick('min', function (v) { state.min = +v; apply(); });
@@ -1194,6 +1391,7 @@
     else if (state.tab === 'ended') loadEnded(true).then(function () { toast(endedErr ? 'Refresh failed: ' + endedErr : nf(endedRows.length) + ' recently ended items'); });
     else if (state.tab === 'x') loadX(true).then(function () { toast(xErr ? 'Refresh failed: ' + xErr : nf(xRows.length) + ' X updates loaded'); });
     else if (state.tab === 'upcoming') loadUpcoming(true).then(function () { toast(upcomingErr ? 'Refresh failed: ' + upcomingErr : nf(upcomingRows.length) + ' upcoming drops loaded'); });
+    else if (state.tab === 'events') loadEvents(true).then(function () { toast(eventErr ? 'Refresh failed: ' + eventErr : nf(eventRows.length) + ' monitored events loaded'); });
     else load(true, false);
   });
 
@@ -1217,10 +1415,54 @@
     if (e.target.id === 'retry') load(true, false);
     if (e.target.id === 'x-retry') loadX(true);
     if (e.target.id === 'upcoming-retry') loadUpcoming(true);
+    if (e.target.id === 'event-retry') loadEvents(true);
+    if (e.target.id === 'reset-events') {
+      state.q = '';
+      apply();
+    }
     if (e.target.id === 'reset-upcoming') {
       state.q = ''; state.method = ''; state.dropStatus = 'any';
       apply();
     }
+  });
+
+  $('event-admin').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var url = $('event-url').value.trim();
+    if (!url) return setEventAdminStatus('Paste a Roblox game URL first.', true);
+    var button = $('event-add');
+    button.disabled = true;
+    setEventAdminStatus('Checking the game and its current events…', false);
+    eventAdminRequest('POST', { url: url })
+      .then(function (d) {
+        eventInfo = d; eventRows = d.events || []; eventErr = null; eventFetched = Date.now();
+        $('event-url').value = '';
+        $('tc-events').textContent = nf(eventRows.length);
+        setEventAdminStatus('Monitoring ' + d.added.name + '. Existing events were baselined, so they will not create old alerts.', false);
+        apply(true);
+        toast('Now monitoring ' + d.added.name);
+      })
+      .catch(function (err) { setEventAdminStatus(err.message, true); })
+      .then(function () { button.disabled = false; });
+  });
+
+  $('event-games').addEventListener('click', function (e) {
+    var button = e.target.closest('[data-remove-event-game]');
+    if (!button) return;
+    var placeId = button.getAttribute('data-remove-event-game');
+    var game = eventInfo && eventInfo.games ? eventInfo.games.find(function (item) { return item.placeId === placeId; }) : null;
+    if (!window.confirm('Stop monitoring ' + (game ? game.name : 'this game') + '?')) return;
+    button.disabled = true;
+    setEventAdminStatus('Removing ' + (game ? game.name : 'game') + '…', false);
+    eventAdminRequest('DELETE', { placeId: placeId })
+      .then(function (d) {
+        eventInfo = d; eventRows = d.events || []; eventErr = null; eventFetched = Date.now();
+        $('tc-events').textContent = nf(eventRows.length);
+        setEventAdminStatus('Stopped monitoring ' + d.removed.name + '.', false);
+        apply(true);
+        toast('Stopped monitoring ' + d.removed.name);
+      })
+      .catch(function (err) { button.disabled = false; setEventAdminStatus(err.message, true); });
   });
 
   $('detail-close').addEventListener('click', function () { detailEl.close(); });
@@ -1281,14 +1523,17 @@
   loadEnded(false);
   loadX(false);
   loadUpcoming(false);
+  loadEvents(false);
   setInterval(stamp, 1000);
   setInterval(tickCountdowns, 1000);
+  setInterval(tickEventCountdowns, 1000);
   // The watcher updates every minute: keep watcher-backed tabs fresh while they are open.
   setInterval(function () {
     if (!document.hidden && (state.tab === 'active' || state.tab === 'claimable' || Date.now() - claimFetched > POLL_MS)) loadClaimable(false);
     if (!document.hidden && state.tab === 'ended' && Date.now() - endedFetched > 60000) loadEnded(false);
     if (!document.hidden && state.tab === 'x' && Date.now() - xFetched > 60000) loadX(false);
     if (!document.hidden && state.tab === 'upcoming' && Date.now() - upcomingFetched > 60000) loadUpcoming(false);
+    if (!document.hidden && state.tab === 'events' && Date.now() - eventFetched > 60000) loadEvents(false);
   }, 60000);
   setInterval(function () { load(false, true); }, POLL_MS);
   // Coming back to a stale tab: refresh right away instead of waiting for the next tick.

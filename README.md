@@ -22,6 +22,8 @@ api/watch.js       Discord alerts for 500+ copy items (call every minute)
 api/x-watch.js     Discord alerts for new posts from configured X accounts
 api/x-feed.js      public snapshots captured by the X watcher for the website
 api/upcoming.js    structured upcoming drops inferred from trusted X posts
+api/event-monitor.js public event feed plus add/remove controls for monitored Roblox games
+api/event-watch.js scheduled Roblox game-event checker and Discord alerts
 api/claimable.js   items the watcher saw being claimed in the last 24h ("Still claimable" tab)
 api/ended.js       Roblox-confirmed sold-out / off-sale items from the last 72h
 public/index.html  the board (static, fetches /api/items on open)
@@ -178,6 +180,36 @@ the website itself does not need to remain open. Ten-minute checks are recommend
 This is genuinely free, but it is less reliable than the official X API. Reader and the community
 RSS fallbacks ultimately depend on X's public website or unofficial internal interface and may
 temporarily stop working after an X change.
+
+## Roblox game event monitor
+
+The **Game events** tab lets you paste a Roblox game URL and monitor its public Roblox events.
+It resolves the game's universe, displays current and upcoming events with live MYT countdowns,
+and sends Discord notifications when an event is newly discovered, is within 20 minutes of
+starting, or goes live. It uses Roblox's public event APIs, so no Roblox account, cookie, or API
+key is required. Up to 20 games can be monitored.
+
+The monitor reuses Upstash Redis and sends alerts through `X_DISCORD_WEBHOOK_URL` (falling back to
+`DISCORD_WEBHOOK_URL`). It also reuses `X_DISCORD_MENTION`. Add this optional variable if you want
+a separate secret:
+
+- `EVENT_WATCH_SECRET`: secret used by the Game events controls and `/api/event-watch`. If omitted,
+  it falls back to `X_WATCH_SECRET`, then `WATCH_SECRET`.
+
+After redeploying:
+
+1. Open the **Game events** tab, paste a Roblox game URL and enter the applicable watcher secret.
+   The website never saves the secret in local storage.
+2. Test the event webhook:
+   `https://YOUR-SITE.vercel.app/api/event-watch?key=YOUR_SECRET&test=1`
+3. Create one additional cron-job.org job for
+   `https://YOUR-SITE.vercel.app/api/event-watch?key=YOUR_SECRET` every 10 minutes.
+
+The existing events present when a game is added are saved as a baseline, so adding a game does
+not flood Discord with old announcements. Future starting-soon and live transitions are still
+tracked. Add `&dry=1` to a normal watcher URL to preview detected alerts without sending or saving.
+The event watcher is separate from `/api/x-watch`; it does not depend on the free X scraper being
+available.
 
 ## Tuning
 

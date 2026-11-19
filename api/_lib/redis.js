@@ -6,6 +6,7 @@ export const META_KEY = 'flb:watch:meta';
 export const ARCHIVE_KEY = 'flb:watch:ended:v1';
 export const X_STATE_KEY = 'flb:x-watch:v3';
 export const X_SCHEDULE_KEY = 'flb:x-schedule:v1';
+export const EVENT_MONITOR_KEY = 'flb:event-monitor:v1';
 
 const env = (k) => (process.env[k] || '').trim();
 

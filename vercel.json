@@ -15,6 +15,12 @@
     },
     "api/upcoming.js": {
       "maxDuration": 10
+    },
+    "api/event-monitor.js": {
+      "maxDuration": 30
+    },
+    "api/event-watch.js": {
+      "maxDuration": 30
     }
   }
 }
